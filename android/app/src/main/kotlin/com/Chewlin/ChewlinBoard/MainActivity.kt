@@ -1,4 +1,4 @@
-package com.example.chewlin_board
+package com.Chewlin.ChewlinBoard
 
 import io.flutter.embedding.android.FlutterActivity
 

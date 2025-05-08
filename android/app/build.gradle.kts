@@ -9,12 +9,12 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.chewlin_board"
+    namespace = "com.Chewlin.ChewlinBoard"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.chewlin_board"
-        minSdk = 21
+        applicationId = "com.Chewlin.ChewlinBoard"
+        minSdk = 23
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -39,4 +39,7 @@ android {
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
+    implementation("com.google.firebase:firebase-analytics")
 }
+
+apply(plugin = "com.google.gms.google-services")

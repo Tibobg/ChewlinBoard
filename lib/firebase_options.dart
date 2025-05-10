@@ -59,4 +59,5 @@ class DefaultFirebaseOptions {
     projectId: 'chewlinboard-7a16f',
     storageBucket: 'chewlinboard-7a16f.firebasestorage.app',
   );
+
 }

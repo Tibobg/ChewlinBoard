@@ -1,15 +1,52 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 import '../theme/colors.dart';
+import '../navigation/bottom_nav_container.dart';
 
-class SignUpPage extends StatelessWidget {
+class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController pseudoController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
+  State<SignUpPage> createState() => _SignUpPageState();
+}
 
+class _SignUpPageState extends State<SignUpPage> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController pseudoController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  final AuthService _authService = AuthService();
+
+  bool _isLoading = false;
+
+  Future<void> _signUp() async {
+    setState(() => _isLoading = true);
+
+    final user = await _authService.signUp(
+      emailController.text.trim(),
+      passwordController.text.trim(),
+      pseudoController.text.trim(),
+    );
+
+    setState(() => _isLoading = false);
+
+    if (user != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const BottomNavContainer()),
+      );
+    } else {
+      final errorMessage =
+          AuthService.lastErrorMessage ??
+          "Erreur lors de la création du compte.";
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -85,9 +122,7 @@ class SignUpPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () {
-                      // TODO: Logique d'inscription
-                    },
+                    onPressed: _isLoading ? null : _signUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.green,
                       shape: RoundedRectangleBorder(
@@ -98,19 +133,24 @@ class SignUpPage extends StatelessWidget {
                         vertical: 14,
                       ),
                     ),
-                    child: const Text(
-                      'Connexion',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: AppColors.beige,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child:
+                        _isLoading
+                            ? const CircularProgressIndicator(
+                              color: AppColors.beige,
+                            )
+                            : const Text(
+                              'Créer un compte',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: AppColors.beige,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                   ),
                   const SizedBox(height: 12),
                   TextButton(
                     onPressed: () {
-                      Navigator.pop(context); // Retour à la connexion
+                      Navigator.pop(context);
                     },
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.green,
@@ -122,13 +162,6 @@ class SignUpPage extends StatelessWidget {
                     child: const Text("J'ai déjà un compte"),
                   ),
                   const Spacer(),
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      'Mot de passe oublié ?',
-                      style: TextStyle(color: AppColors.beige, fontSize: 12),
-                    ),
-                  ),
                 ],
               ),
             ),

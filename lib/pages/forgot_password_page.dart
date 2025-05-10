@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import 'login_page.dart';
+import '../services/auth_service.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -11,6 +12,33 @@ class ForgotPasswordPage extends StatefulWidget {
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final TextEditingController _emailController = TextEditingController();
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
+
+  Future<void> _sendResetEmail() async {
+    setState(() => _isLoading = true);
+
+    try {
+      await _authService.sendPasswordResetEmail(_emailController.text.trim());
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email de réinitialisation envoyé !')),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Une erreur est survenue.')));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,9 +96,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   const SizedBox(height: 24),
 
                   ElevatedButton(
-                    onPressed: () {
-                      // Envoyer la demande de réinitialisation Firebase
-                    },
+                    onPressed: _isLoading ? null : _sendResetEmail,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.green,
                       shape: RoundedRectangleBorder(
@@ -81,14 +107,19 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         vertical: 14,
                       ),
                     ),
-                    child: const Text(
-                      'Envoyer',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: AppColors.beige,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child:
+                        _isLoading
+                            ? const CircularProgressIndicator(
+                              color: AppColors.beige,
+                            )
+                            : const Text(
+                              'Envoyer',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: AppColors.beige,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                   ),
 
                   const Spacer(),

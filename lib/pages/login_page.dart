@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import 'signup_page.dart';
 import 'forgot_password_page.dart';
-import '../navigation/bottom_nav_container.dart';
 import '../services/auth_service.dart';
+import '../pages/auth_gate.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -37,9 +37,10 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     if (user != null) {
+      // ✅ On redirige vers AuthGate, qui gère la logique admin/utilisateur
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const BottomNavContainer()),
+        MaterialPageRoute(builder: (_) => const AuthGate()),
       );
     } else {
       ScaffoldMessenger.of(

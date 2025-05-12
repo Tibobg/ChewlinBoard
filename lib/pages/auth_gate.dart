@@ -33,7 +33,7 @@ class AuthGate extends StatelessWidget {
               if (adminSnapshot.data == true) {
                 return const AdminNavContainer();
               } else {
-                return const BottomNavContainer(); // ta homepage utilisateur
+                return const BottomNavContainer(); // la homepage utilisateur
               }
             },
           );

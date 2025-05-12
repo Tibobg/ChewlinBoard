@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'admin_chat_page.dart'; // Assure-toi que ce fichier contient le chat complet
 
 class AdminMessagePage extends StatelessWidget {
   const AdminMessagePage({super.key});
@@ -40,7 +41,6 @@ class AdminMessagePage extends StatelessWidget {
                 (uid) => uid != currentUid,
               );
               final lastMessage = doc['lastMessage'] ?? '';
-              final chatId = doc.id;
 
               return FutureBuilder<DocumentSnapshot>(
                 future:
@@ -49,9 +49,7 @@ class AdminMessagePage extends StatelessWidget {
                         .doc(userUid)
                         .get(),
                 builder: (context, userSnapshot) {
-                  if (!userSnapshot.hasData) {
-                    return const SizedBox.shrink();
-                  }
+                  if (!userSnapshot.hasData) return const SizedBox.shrink();
 
                   final userData =
                       userSnapshot.data!.data() as Map<String, dynamic>;
@@ -85,21 +83,6 @@ class AdminMessagePage extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-}
-
-class AdminChatPage extends StatelessWidget {
-  final String userUid;
-  final String pseudo;
-
-  const AdminChatPage({super.key, required this.userUid, required this.pseudo});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(pseudo)),
-      body: const Center(child: Text("À implémenter : affichage des messages")),
     );
   }
 }

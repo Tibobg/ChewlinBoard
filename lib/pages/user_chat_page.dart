@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../theme/colors.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UserChatPage extends StatefulWidget {
   final String userUid;
@@ -13,9 +17,75 @@ class UserChatPage extends StatefulWidget {
 
 class _UserChatPageState extends State<UserChatPage> {
   final TextEditingController _controller = TextEditingController();
-
-  // Remplace ceci par TON vrai UID admin
   final String adminUid = 'wjGx853IYFTe2hrtNxrSvTKc23h1';
+  String? _replyToMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    final currentUid = FirebaseAuth.instance.currentUser!.uid;
+    FirebaseFirestore.instance.collection('users').doc(currentUid).set({
+      'lastSeen': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> _sendTextMessage() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+
+    await _sendMessage(text: text);
+    _controller.clear();
+    setState(() {
+      _replyToMessage = null;
+    });
+  }
+
+  Future<void> _pickAndSendImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      final file = File(pickedFile.path);
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = FirebaseStorage.instance.ref().child('chat_images/$fileName');
+      final uploadTask = await ref.putFile(file);
+
+      if (uploadTask.state == TaskState.success) {
+        final imageUrl = await ref.getDownloadURL();
+        await _sendMessage(imageUrl: imageUrl);
+        setState(() {
+          _replyToMessage = null;
+        });
+      }
+    }
+  }
+
+  Future<void> _sendMessage({String? text, String? imageUrl}) async {
+    final chatId =
+        widget.userUid.compareTo(adminUid) < 0
+            ? '${widget.userUid}_$adminUid'
+            : '${adminUid}_${widget.userUid}';
+
+    final messageData = {
+      'senderId': widget.userUid,
+      'text': text ?? '',
+      'imageUrl': imageUrl,
+      'createdAt': FieldValue.serverTimestamp(),
+      'isRead': false,
+      'replyTo': _replyToMessage,
+    };
+
+    final docRef = FirebaseFirestore.instance
+        .collection('messages')
+        .doc(chatId);
+    await docRef.collection('messages').add(messageData);
+
+    await docRef.set({
+      'participants': [widget.userUid, adminUid],
+      'lastMessage': text ?? '📷 Image',
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,13 +101,23 @@ class _UserChatPageState extends State<UserChatPage> {
         .orderBy('createdAt', descending: true);
 
     return Scaffold(
+      backgroundColor: AppColors.black,
       appBar: AppBar(
-        title: const Text('Chat avec le créateur'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: AppColors.beige),
+        centerTitle: true,
+        title: Text(
+          'Chat avec Chewlin',
+          style: TextStyle(
+            color: AppColors.beige,
+            fontFamily: 'ReginaBlack',
+            fontSize: 20,
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pushReplacementNamed(context, '/'); // ou autre route
-          },
+          onPressed: () => Navigator.pushReplacementNamed(context, '/'),
         ),
       ),
       body: Column(
@@ -54,27 +134,116 @@ class _UserChatPageState extends State<UserChatPage> {
 
                 return ListView.builder(
                   reverse: true,
+                  physics: const BouncingScrollPhysics(),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final text = message['text'] ?? '';
-                    final senderId = message['senderId'];
+                    final data = message.data() as Map<String, dynamic>;
+                    final text = data['text'] ?? '';
+                    final imageUrl = data['imageUrl'];
+                    final senderId = data['senderId'];
                     final isUser = senderId == widget.userUid;
+                    final timestamp =
+                        (data['createdAt'] as Timestamp?)?.toDate();
+                    final isRead =
+                        data.containsKey('isRead') ? data['isRead'] : false;
+                    final replyTo = data['replyTo'];
+
+                    bool sameSenderAsPrevious = false;
+                    if (index < messages.length - 1) {
+                      final previousSender =
+                          (messages[index + 1].data()
+                              as Map<String, dynamic>)['senderId'];
+                      sameSenderAsPrevious = previousSender == senderId;
+                    }
 
                     return Align(
                       alignment:
                           isUser ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 8,
+                      child: GestureDetector(
+                        onLongPress: () {
+                          setState(() {
+                            _replyToMessage = text;
+                          });
+                        },
+                        child: Column(
+                          crossAxisAlignment:
+                              isUser
+                                  ? CrossAxisAlignment.end
+                                  : CrossAxisAlignment.start,
+                          children: [
+                            if (replyTo != null && replyTo.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 16,
+                                  right: 16,
+                                  bottom: 4,
+                                ),
+                                child: Text(
+                                  '↪ $replyTo',
+                                  style: TextStyle(
+                                    color: AppColors.beige.withOpacity(0.5),
+                                    fontStyle: FontStyle.italic,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            Container(
+                              margin: EdgeInsets.only(
+                                top: sameSenderAsPrevious ? 2 : 10,
+                                bottom: 2,
+                                left: 12,
+                                right: 12,
+                              ),
+                              padding: const EdgeInsets.all(12),
+                              constraints: const BoxConstraints(maxWidth: 280),
+                              decoration: BoxDecoration(
+                                color:
+                                    isUser
+                                        ? AppColors.green
+                                        : AppColors.black.withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: AppColors.green,
+                                  width: isUser ? 0 : 1,
+                                ),
+                              ),
+                              child:
+                                  imageUrl != null
+                                      ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Image.network(
+                                          imageUrl,
+                                          width: 200,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                      : Text(
+                                        text,
+                                        style: TextStyle(
+                                          color: AppColors.beige,
+                                          fontFamily: 'Roboto',
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                            ),
+                            if (index == 0 && timestamp != null)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 16,
+                                  right: 16,
+                                  bottom: 4,
+                                ),
+                                child: Text(
+                                  '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')} - ${isRead ? "Lu" : "Envoyé"}',
+                                  style: TextStyle(
+                                    color: AppColors.beige.withOpacity(0.5),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: isUser ? Colors.blue[100] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(text),
                       ),
                     );
                   },
@@ -82,51 +251,68 @@ class _UserChatPageState extends State<UserChatPage> {
               },
             ),
           ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Écris ton message...',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
+          if (_replyToMessage != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Réponse à : $_replyToMessage',
+                      style: TextStyle(
+                        color: AppColors.beige,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: () async {
-                    final text = _controller.text.trim();
-                    if (text.isEmpty) return;
-
-                    final messageData = {
-                      'senderId': widget.userUid,
-                      'text': text,
-                      'imageUrl': null,
-                      'createdAt': FieldValue.serverTimestamp(),
-                    };
-
-                    final docRef = FirebaseFirestore.instance
-                        .collection('messages')
-                        .doc(chatId);
-
-                    await docRef.collection('messages').add(messageData);
-
-                    await docRef.set({
-                      'participants': [widget.userUid, adminUid],
-                      'lastMessage': text,
-                      'updatedAt': FieldValue.serverTimestamp(),
-                    }, SetOptions(merge: true));
-
-                    _controller.clear();
-                  },
-                ),
-              ],
+                  IconButton(
+                    icon: Icon(Icons.close, color: AppColors.beige),
+                    onPressed: () {
+                      setState(() {
+                        _replyToMessage = null;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.green),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      style: TextStyle(
+                        color: AppColors.beige,
+                        fontFamily: 'Roboto',
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Écrire votre message...',
+                        hintStyle: TextStyle(
+                          color: AppColors.beige.withOpacity(0.5),
+                          fontFamily: 'Roboto',
+                        ),
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.image, color: AppColors.beige),
+                    onPressed: _pickAndSendImage,
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.send, color: AppColors.beige),
+                    onPressed: _sendTextMessage,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

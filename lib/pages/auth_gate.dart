@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../navigation/bottom_nav_container.dart';
 import 'login_page.dart';
 import 'splash_screen.dart';
-import '../pagesAdmin/AdminHomePage.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});

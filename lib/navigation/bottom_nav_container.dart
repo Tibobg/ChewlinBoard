@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../pages/home_page.dart';
-import '../pages/notification_page.dart';
+import '../pages/full_gallery_page.dart';
 import '../pages/project_page.dart';
 import '../pages/message_page.dart';
 import '../pages/profile_page.dart';
@@ -18,7 +18,7 @@ class _BottomNavContainerState extends State<BottomNavContainer> {
 
   final List<Widget> _pages = const [
     HomePage(),
-    NotificationPage(),
+    FullGalleryPage(),
     ProjectPage(),
     MessagePage(),
     ProfilePage(),
@@ -52,8 +52,8 @@ class _BottomNavContainerState extends State<BottomNavContainer> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Notification',
+            icon: Icon(Icons.collections),
+            label: 'Galerie',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Project'),
           BottomNavigationBarItem(icon: Icon(Icons.send), label: 'Message'),

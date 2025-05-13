@@ -1,82 +1,43 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:photo_view/photo_view.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../theme/colors.dart';
 
-class DriveGallery extends StatefulWidget {
-  const DriveGallery({super.key});
+class FullGalleryPage extends StatefulWidget {
+  const FullGalleryPage({super.key});
 
   @override
-  State<DriveGallery> createState() => _DriveGalleryState();
+  State<FullGalleryPage> createState() => _FullGalleryPageState();
 }
 
-class _DriveGalleryState extends State<DriveGallery> {
-  final ScrollController _scrollController = ScrollController();
-  List<String> imageUrls = [];
-  bool isLoading = true;
-  Timer? _scrollTimer;
-  Timer? _resumeTimer;
-
+class _FullGalleryPageState extends State<FullGalleryPage> {
   final String folderId = '1N6R2DfseVo9We6wRQoS-Mqdzc_tg5TtU';
   final String apiKey = 'AIzaSyCxHIowhgMNEQCNCkINKGsFqztbix_4o_g';
 
-  void stopAutoScroll() {
-    _scrollTimer?.cancel();
-    _scrollTimer = null;
-
-    _resumeTimer?.cancel();
-    _resumeTimer = Timer(const Duration(seconds: 3), () {
-      startAutoScroll();
-    });
-  }
-
-  void startAutoScroll() {
-    const scrollSpeed = 0.20;
-
-    _scrollTimer = Timer.periodic(const Duration(milliseconds: 25), (_) {
-      if (_scrollController.hasClients) {
-        final maxScroll = _scrollController.position.maxScrollExtent;
-        final current = _scrollController.offset;
-
-        if (current < maxScroll) {
-          _scrollController.jumpTo(current + scrollSpeed);
-        } else {
-          _scrollController.jumpTo(0);
-        }
-      }
-    });
-  }
+  List<String> imageUrls = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchImagesFromDrive();
+    fetchAllImages();
   }
 
-  @override
-  void dispose() {
-    _scrollTimer?.cancel();
-    _scrollController.dispose();
-    super.dispose();
-    _resumeTimer?.cancel();
-  }
-
-  Future<void> fetchImagesFromDrive() async {
+  Future<void> fetchAllImages() async {
     final url =
         "https://www.googleapis.com/drive/v3/files?q='$folderId'+in+parents+and+mimeType='image/jpeg'&orderBy=createdTime+desc&key=$apiKey&fields=files(id,name)";
 
     final response = await http.get(Uri.parse(url));
-
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       final files = data['files'] as List;
 
       final urls =
-          files.take(5).map<String>((file) {
+          files.map<String>((file) {
             final id = file['id'];
             return 'https://drive.google.com/thumbnail?id=$id&sz=w600';
           }).toList();
@@ -85,12 +46,6 @@ class _DriveGalleryState extends State<DriveGallery> {
         imageUrls = urls;
         isLoading = false;
       });
-
-      for (final url in urls) {
-        precacheImage(CachedNetworkImageProvider(url), context);
-      }
-
-      startAutoScroll();
     } else {
       print("Erreur lors de la récupération des images : ${response.body}");
     }
@@ -168,7 +123,7 @@ class _DriveGalleryState extends State<DriveGallery> {
                         ),
                       ),
                       Positioned(
-                        left: 20,
+                        left: 16,
                         top: MediaQuery.of(context).size.height / 2 - 24,
                         child: IconButton(
                           icon: const Icon(
@@ -189,7 +144,7 @@ class _DriveGalleryState extends State<DriveGallery> {
                         ),
                       ),
                       Positioned(
-                        right: 20,
+                        right: 16,
                         top: MediaQuery.of(context).size.height / 2 - 24,
                         child: IconButton(
                           icon: const Icon(
@@ -220,65 +175,154 @@ class _DriveGalleryState extends State<DriveGallery> {
     );
   }
 
+  void _launchLink(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      debugPrint("Impossible d'ouvrir le lien : \$url");
+    }
+  }
+
+  Widget _buildSocialButton(
+    String label,
+    String url,
+    IconData icon,
+    Color color,
+  ) {
+    return InkWell(
+      onTap: () => _launchLink(url),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          color: color.withOpacity(0.9),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (imageUrls.isEmpty) {
-      return const Center(child: Text("Aucune image trouvée."));
-    }
-
-    return NotificationListener<UserScrollNotification>(
-      onNotification: (notification) {
-        stopAutoScroll();
-        return false;
-      },
-      child: GestureDetector(
-        onTap: stopAutoScroll,
-        child: SizedBox(
-          height: 200,
-          child: ListView.builder(
-            controller: _scrollController,
-            scrollDirection: Axis.horizontal,
-            itemCount: imageUrls.length,
-            itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () {
-                  stopAutoScroll();
-                  showFullScreenGallery(index);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: CachedNetworkImage(
-                      imageUrl: imageUrls[index],
-                      width: 160,
-                      fit: BoxFit.cover,
-                      placeholder:
-                          (context, url) => Shimmer.fromColors(
-                            baseColor: Colors.grey.shade800,
-                            highlightColor: Colors.grey.shade600,
-                            child: Container(
-                              width: 160,
-                              height: 200,
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade800,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
+    return Scaffold(
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/background.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          "Galerie complète",
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.beige,
+                            fontFamily: 'ReginaBlack',
                           ),
-                      errorWidget:
-                          (context, url, error) => const Icon(Icons.error),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          "Découvrez toutes mes planches customisées",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.beige,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              );
-            },
+                SliverToBoxAdapter(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildSocialButton(
+                        "Instagram",
+                        "https://www.instagram.com/chewlin.pics?igsh=MTNoenJmMXRhYXg3bQ==",
+                        Icons.camera_alt,
+                        Colors.pink,
+                      ),
+                      _buildSocialButton(
+                        "TikTok",
+                        "https://www.tiktok.com/@chewlin.pics",
+                        Icons.music_note,
+                        Colors.black,
+                      ),
+                    ],
+                  ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                isLoading
+                    ? const SliverFillRemaining(
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                    : SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount:
+                              MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.5, // plus haut pour skateboard
+                        ),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final url = imageUrls[index];
+                          return GestureDetector(
+                            onTap: () => showFullScreenGallery(index),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: CachedNetworkImage(
+                                imageUrl: url,
+                                fit: BoxFit.cover,
+                                placeholder:
+                                    (context, url) =>
+                                        Container(color: Colors.grey.shade800),
+                                errorWidget:
+                                    (context, url, error) => const Icon(
+                                      Icons.error,
+                                      color: Colors.red,
+                                    ),
+                              ),
+                            ),
+                          );
+                        }, childCount: imageUrls.length),
+                      ),
+                    ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

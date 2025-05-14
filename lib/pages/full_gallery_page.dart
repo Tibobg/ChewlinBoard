@@ -217,112 +217,126 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/background.jpg'),
-                fit: BoxFit.cover,
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context);
+        return false;
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/background.jpg'),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 16,
+            SafeArea(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 16,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            "Galerie complète",
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.beige,
+                              fontFamily: 'ReginaBlack',
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            "Découvrez toutes mes planches customisées",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.beige,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Galerie complète",
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.beige,
-                            fontFamily: 'ReginaBlack',
-                          ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildSocialButton(
+                          "Instagram",
+                          "https://www.instagram.com/chewlin.pics?igsh=MTNoenJmMXRhYXg3bQ==",
+                          Icons.camera_alt,
+                          Colors.pink,
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          "Découvrez toutes mes planches customisées",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.beige,
-                            fontFamily: 'Poppins',
-                          ),
+                        _buildSocialButton(
+                          "TikTok",
+                          "https://www.tiktok.com/@chewlincorp?_t=ZN-8wM4sgM4wmE&_r=1",
+                          Icons.music_note,
+                          Colors.black,
                         ),
                       ],
                     ),
                   ),
-                ),
-                SliverToBoxAdapter(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildSocialButton(
-                        "Instagram",
-                        "https://www.instagram.com/chewlin.pics?igsh=MTNoenJmMXRhYXg3bQ==",
-                        Icons.camera_alt,
-                        Colors.pink,
-                      ),
-                      _buildSocialButton(
-                        "TikTok",
-                        "https://www.tiktok.com/@chewlin.pics",
-                        Icons.music_note,
-                        Colors.black,
-                      ),
-                    ],
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                isLoading
-                    ? const SliverFillRemaining(
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                    : SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      sliver: SliverGrid(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount:
-                              MediaQuery.of(context).size.width > 600 ? 3 : 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.5, // plus haut pour skateboard
-                        ),
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          final url = imageUrls[index];
-                          return GestureDetector(
-                            onTap: () => showFullScreenGallery(index),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: CachedNetworkImage(
-                                imageUrl: url,
-                                fit: BoxFit.cover,
-                                placeholder:
-                                    (context, url) =>
-                                        Container(color: Colors.grey.shade800),
-                                errorWidget:
-                                    (context, url, error) => const Icon(
-                                      Icons.error,
-                                      color: Colors.red,
-                                    ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  isLoading
+                      ? const SliverFillRemaining(
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                      : SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount:
+                                    MediaQuery.of(context).size.width > 600
+                                        ? 3
+                                        : 2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio:
+                                    0.5, // plus haut pour skateboard
                               ),
-                            ),
-                          );
-                        }, childCount: imageUrls.length),
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final url = imageUrls[index];
+                            return GestureDetector(
+                              onTap: () => showFullScreenGallery(index),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: CachedNetworkImage(
+                                  imageUrl: url,
+                                  fit: BoxFit.cover,
+                                  placeholder:
+                                      (context, url) => Container(
+                                        color: Colors.grey.shade800,
+                                      ),
+                                  errorWidget:
+                                      (context, url, error) => const Icon(
+                                        Icons.error,
+                                        color: Colors.red,
+                                      ),
+                                ),
+                              ),
+                            );
+                          }, childCount: imageUrls.length),
+                        ),
                       ),
-                    ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -42,109 +42,124 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/background.jpg'),
-                fit: BoxFit.cover,
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context);
+        return false;
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/background.jpg'),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 32),
-                  const Text(
-                    'ChewLinBoard',
-                    style: TextStyle(
-                      fontFamily: 'ReginaBlack',
-                      fontSize: 28,
-                      color: AppColors.beige,
-                    ),
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
                   ),
-                  const SizedBox(height: 16),
-                  Image.asset('assets/images/logo-img.jpeg', height: 100),
-                  const SizedBox(height: 32),
-
-                  const Text(
-                    'Email de récupération...',
-                    style: TextStyle(fontSize: 16, color: AppColors.beige),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _emailController,
-                    style: const TextStyle(color: AppColors.beige),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: AppColors.black.withOpacity(0.8),
-                      hintText: 'Email de récupération...',
-                      hintStyle: const TextStyle(color: AppColors.beige),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 32),
+                      const Text(
+                        'ChewLinBoard',
+                        style: TextStyle(
+                          fontFamily: 'ReginaBlack',
+                          fontSize: 28,
+                          color: AppColors.beige,
+                        ),
                       ),
-                    ),
-                  ),
+                      const SizedBox(height: 16),
+                      Image.asset('assets/images/logo-img.jpeg', height: 100),
+                      const SizedBox(height: 32),
 
-                  const SizedBox(height: 24),
+                      const Text(
+                        'Email de récupération...',
+                        style: TextStyle(fontSize: 16, color: AppColors.beige),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _emailController,
+                        style: const TextStyle(color: AppColors.beige),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: AppColors.black.withOpacity(0.8),
+                          hintText: 'Email de récupération...',
+                          hintStyle: const TextStyle(color: AppColors.beige),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
 
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _sendResetEmail,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.green,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                      const SizedBox(height: 24),
+
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _sendResetEmail,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.green,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 14,
+                          ),
+                        ),
+                        child:
+                            _isLoading
+                                ? const CircularProgressIndicator(
+                                  color: AppColors.beige,
+                                )
+                                : const Text(
+                                  'Envoyer',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: AppColors.beige,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40,
-                        vertical: 14,
-                      ),
-                    ),
-                    child:
-                        _isLoading
-                            ? const CircularProgressIndicator(
-                              color: AppColors.beige,
-                            )
-                            : const Text(
-                              'Envoyer',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: AppColors.beige,
-                                fontWeight: FontWeight.bold,
-                              ),
+
+                      const Spacer(),
+
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LoginPage(),
                             ),
-                  ),
-
-                  const Spacer(),
-
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                      );
-                    },
-                    child: const Text(
-                      "J'ai déjà un compte",
-                      style: TextStyle(
-                        color: AppColors.beige,
-                        fontWeight: FontWeight.bold,
+                          );
+                        },
+                        child: const Text(
+                          "J'ai déjà un compte",
+                          style: TextStyle(
+                            color: AppColors.beige,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

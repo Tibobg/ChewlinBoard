@@ -17,6 +17,7 @@ class UserChatPage extends StatefulWidget {
 
 class _UserChatPageState extends State<UserChatPage> {
   final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final String adminUid = 'wjGx853IYFTe2hrtNxrSvTKc23h1';
   String? _replyToMessage;
   late final String chatId;
@@ -40,21 +41,6 @@ class _UserChatPageState extends State<UserChatPage> {
   }
 
   Future<void> _markMessagesAsRead(String conversationId, String userId) async {
-    final queryAll =
-        await FirebaseFirestore.instance
-            .collection('messages')
-            .doc(conversationId)
-            .collection('messages')
-            .get();
-
-    print('🔥 DEBUG : Tous les messages de $conversationId :');
-    for (final doc in queryAll.docs) {
-      final data = doc.data();
-      print(
-        '→ ${doc.id} | senderId: ${data['senderId']} | isRead: ${data['isRead']}',
-      );
-    }
-
     final unreadQuery =
         await FirebaseFirestore.instance
             .collection('messages')
@@ -64,11 +50,11 @@ class _UserChatPageState extends State<UserChatPage> {
             .where('isRead', isEqualTo: false)
             .get();
 
-    print('🟡 Messages à marquer comme lus : ${unreadQuery.docs.length}');
-
     for (final doc in unreadQuery.docs) {
-      await doc.reference.update({'isRead': true});
-      print('✅ ${doc.id} mis à jour en isRead: true');
+      await doc.reference.update({
+        'isRead': true,
+        'readAt': FieldValue.serverTimestamp(),
+      });
     }
   }
 
@@ -95,7 +81,29 @@ class _UserChatPageState extends State<UserChatPage> {
 
       if (uploadTask.state == TaskState.success) {
         final imageUrl = await ref.getDownloadURL();
-        await _sendMessage(imageUrl: imageUrl);
+
+        final senderId = FirebaseAuth.instance.currentUser!.uid;
+
+        final messageData = {
+          'senderId': senderId,
+          'imageUrl': imageUrl,
+          'text': '',
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+          'replyTo': _replyToMessage,
+        };
+
+        final docRef = FirebaseFirestore.instance
+            .collection('messages')
+            .doc(chatId);
+        await docRef.collection('messages').add(messageData);
+
+        await docRef.set({
+          'participants': [widget.userUid, senderId],
+          'lastMessage': '📷 Image',
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
         setState(() {
           _replyToMessage = null;
         });
@@ -126,13 +134,21 @@ class _UserChatPageState extends State<UserChatPage> {
     }, SetOptions(merge: true));
   }
 
+  String formatTime(DateTime date) {
+    return '${date.hour}h${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
   @override
   Widget build(BuildContext context) {
     final messagesRef = FirebaseFirestore.instance
         .collection('messages')
         .doc(chatId)
         .collection('messages')
-        .orderBy('createdAt', descending: true);
+        .orderBy('createdAt', descending: false);
 
     return WillPopScope(
       onWillPop: () async {
@@ -170,9 +186,18 @@ class _UserChatPageState extends State<UserChatPage> {
                   }
 
                   final messages = snapshot.data!.docs;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_scrollController.hasClients) {
+                      _scrollController.jumpTo(
+                        _scrollController.position.maxScrollExtent,
+                      );
+                    }
+                  });
+                  DateTime? lastDate;
 
                   return ListView.builder(
-                    reverse: true,
+                    controller: _scrollController,
+                    reverse: false,
                     physics: const BouncingScrollPhysics(),
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
@@ -181,116 +206,140 @@ class _UserChatPageState extends State<UserChatPage> {
                       final text = data['text'] ?? '';
                       final imageUrl = data['imageUrl'];
                       final senderId = data['senderId'];
+                      final currentUid = FirebaseAuth.instance.currentUser!.uid;
                       final isUser = senderId == widget.userUid;
+                      final isCurrentUser = senderId == currentUid;
                       final timestamp =
                           (data['createdAt'] as Timestamp?)?.toDate();
-                      final isRead =
-                          data.containsKey('isRead') ? data['isRead'] : false;
+                      final isRead = data['isRead'] == true;
+                      final readAt = (data['readAt'] as Timestamp?)?.toDate();
                       final replyTo = data['replyTo'];
 
-                      bool sameSenderAsPrevious = false;
-                      if (index < messages.length - 1) {
-                        final previousSender =
-                            (messages[index + 1].data()
-                                as Map<String, dynamic>)['senderId'];
-                        sameSenderAsPrevious = previousSender == senderId;
+                      final showMeta = index == messages.length - 1;
+
+                      final widgets = <Widget>[];
+
+                      if (timestamp != null &&
+                          (lastDate == null ||
+                              !isSameDay(timestamp, lastDate!))) {
+                        lastDate = timestamp;
+                        widgets.add(
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Center(
+                              child: Text(
+                                '${timestamp.day}/${timestamp.month}/${timestamp.year}',
+                                style: TextStyle(
+                                  color: AppColors.beige.withOpacity(0.6),
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
                       }
 
-                      return Align(
-                        alignment:
-                            isUser
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                        child: GestureDetector(
-                          onLongPress: () {
-                            setState(() {
-                              _replyToMessage = text;
-                            });
-                          },
-                          child: Column(
-                            crossAxisAlignment:
-                                isUser
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                            children: [
-                              if (replyTo != null && replyTo.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    left: 16,
-                                    right: 16,
-                                    bottom: 4,
-                                  ),
-                                  child: Text(
-                                    '↪ $replyTo',
-                                    style: TextStyle(
-                                      color: AppColors.beige.withOpacity(0.5),
-                                      fontStyle: FontStyle.italic,
-                                      fontSize: 12,
+                      widgets.add(
+                        Align(
+                          alignment:
+                              isUser
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                          child: GestureDetector(
+                            onLongPress: () {
+                              setState(() {
+                                _replyToMessage = text;
+                              });
+                            },
+                            child: Column(
+                              crossAxisAlignment:
+                                  isUser
+                                      ? CrossAxisAlignment.end
+                                      : CrossAxisAlignment.start,
+                              children: [
+                                if (replyTo != null && replyTo.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: 16,
+                                      right: 16,
+                                      bottom: 4,
+                                    ),
+                                    child: Text(
+                                      '↪ $replyTo',
+                                      style: TextStyle(
+                                        color: AppColors.beige.withOpacity(0.5),
+                                        fontStyle: FontStyle.italic,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              Container(
-                                margin: EdgeInsets.only(
-                                  top: sameSenderAsPrevious ? 2 : 10,
-                                  bottom: 2,
-                                  left: 12,
-                                  right: 12,
-                                ),
-                                padding: const EdgeInsets.all(12),
-                                constraints: const BoxConstraints(
-                                  maxWidth: 280,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      isUser
-                                          ? AppColors.green
-                                          : AppColors.black.withOpacity(0.8),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: AppColors.green,
-                                    width: isUser ? 0 : 1,
+                                Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                    horizontal: 12,
                                   ),
-                                ),
-                                child:
-                                    imageUrl != null
-                                        ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          child: Image.network(
-                                            imageUrl,
-                                            width: 200,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        )
-                                        : Text(
-                                          text,
-                                          style: TextStyle(
-                                            color: AppColors.beige,
-                                            fontFamily: 'Roboto',
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                              ),
-                              if (index == 0 && timestamp != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    left: 16,
-                                    right: 16,
-                                    bottom: 4,
+                                  padding: const EdgeInsets.all(12),
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 280,
                                   ),
-                                  child: Text(
-                                    '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')} - ${isRead ? "Lu" : "Envoyé"}',
-                                    style: TextStyle(
-                                      color: AppColors.beige.withOpacity(0.5),
-                                      fontSize: 12,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        isUser
+                                            ? AppColors.green
+                                            : AppColors.black.withOpacity(0.8),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: AppColors.green,
+                                      width: isUser ? 0 : 1,
                                     ),
                                   ),
+                                  child:
+                                      imageUrl != null
+                                          ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            child: Image.network(
+                                              imageUrl,
+                                              width: 200,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          )
+                                          : Text(
+                                            text,
+                                            style: TextStyle(
+                                              color: AppColors.beige,
+                                              fontFamily: 'Roboto',
+                                              fontSize: 14,
+                                            ),
+                                          ),
                                 ),
-                            ],
+                                if (showMeta && timestamp != null)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 2,
+                                    ),
+                                    child: Text(
+                                      isCurrentUser
+                                          ? (isRead && readAt != null
+                                              ? 'Vu à ${formatTime(readAt.toLocal())}'
+                                              : '${formatTime(timestamp.toLocal())} - Envoyé')
+                                          : 'Envoyé à ${formatTime(timestamp.toLocal())}',
+                                      style: TextStyle(
+                                        color: AppColors.beige.withOpacity(0.5),
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       );
+
+                      return Column(children: widgets);
                     },
                   );
                 },

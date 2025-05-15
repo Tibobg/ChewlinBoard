@@ -18,22 +18,25 @@ class AdminChatPage extends StatefulWidget {
 
 class _AdminChatPageState extends State<AdminChatPage> {
   final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
   String? _replyToMessage;
+
+  late final String chatId;
 
   @override
   void initState() {
     super.initState();
     final currentUid = FirebaseAuth.instance.currentUser!.uid;
 
-    FirebaseFirestore.instance.collection('users').doc(currentUid).set({
-      'lastSeen': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    final chatId =
+    chatId =
         widget.userUid.compareTo(currentUid) < 0
             ? '${widget.userUid}_$currentUid'
             : '${currentUid}_${widget.userUid}';
+
+    FirebaseFirestore.instance.collection('users').doc(currentUid).set({
+      'lastSeen': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
 
     _markMessagesAsRead(chatId, currentUid);
   }
@@ -49,11 +52,14 @@ class _AdminChatPageState extends State<AdminChatPage> {
             .get();
 
     for (final doc in query.docs) {
-      await doc.reference.update({'isRead': true});
+      await doc.reference.update({
+        'isRead': true,
+        'readAt': FieldValue.serverTimestamp(),
+      });
     }
   }
 
-  Future<void> _sendTextMessage(String chatId, String senderId) async {
+  Future<void> _sendTextMessage(String senderId) async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
@@ -64,7 +70,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
     });
   }
 
-  Future<void> _pickAndSendImage(String chatId, String senderId) async {
+  Future<void> _pickAndSendImage(String senderId) async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
@@ -75,11 +81,27 @@ class _AdminChatPageState extends State<AdminChatPage> {
 
       if (uploadTask.state == TaskState.success) {
         final imageUrl = await ref.getDownloadURL();
-        await _sendMessage(
-          chatId: chatId,
-          senderId: senderId,
-          imageUrl: imageUrl,
-        );
+
+        final messageData = {
+          'senderId': senderId,
+          'imageUrl': imageUrl,
+          'text': '',
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+          'replyTo': _replyToMessage,
+        };
+
+        final docRef = FirebaseFirestore.instance
+            .collection('messages')
+            .doc(chatId);
+        await docRef.collection('messages').add(messageData);
+
+        await docRef.set({
+          'participants': [senderId, widget.userUid],
+          'lastMessage': '📷 Image',
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
         setState(() {
           _replyToMessage = null;
         });
@@ -118,19 +140,23 @@ class _AdminChatPageState extends State<AdminChatPage> {
     });
   }
 
+  String formatTime(DateTime date) {
+    return '${date.hour}h${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUid = FirebaseAuth.instance.currentUser!.uid;
-    final chatId =
-        widget.userUid.compareTo(currentUid) < 0
-            ? '${widget.userUid}_$currentUid'
-            : '${currentUid}_${widget.userUid}';
 
     final messagesRef = FirebaseFirestore.instance
         .collection('messages')
         .doc(chatId)
         .collection('messages')
-        .orderBy('createdAt', descending: true);
+        .orderBy('createdAt', descending: false);
 
     return Scaffold(
       backgroundColor: AppColors.black,
@@ -139,53 +165,13 @@ class _AdminChatPageState extends State<AdminChatPage> {
         elevation: 0,
         iconTheme: IconThemeData(color: AppColors.beige),
         centerTitle: true,
-        title: Column(
-          children: [
-            Text(
-              widget.pseudo,
-              style: TextStyle(
-                color: AppColors.beige,
-                fontFamily: 'ReginaBlack',
-                fontSize: 20,
-              ),
-            ),
-            StreamBuilder<DocumentSnapshot>(
-              stream:
-                  FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(widget.userUid)
-                      .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const SizedBox.shrink();
-                final data = snapshot.data!.data() as Map<String, dynamic>;
-                final lastSeen = data['lastSeen'] as Timestamp?;
-                final now = DateTime.now();
-                String status = '';
-                if (lastSeen != null) {
-                  final diff = now.difference(lastSeen.toDate());
-                  if (diff.inMinutes < 1)
-                    status = 'En ligne';
-                  else if (diff.inMinutes < 60)
-                    status = 'Actif il y a ${diff.inMinutes} min';
-                  else if (diff.inHours < 24)
-                    status = 'Actif il y a ${diff.inHours} h';
-                  else {
-                    final date = lastSeen.toDate();
-                    status =
-                        'Actif le ${date.day}/${date.month} à ${date.hour}h${date.minute.toString().padLeft(2, '0')}';
-                  }
-                }
-                return Text(
-                  status,
-                  style: TextStyle(
-                    color: AppColors.beige.withOpacity(0.5),
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                  ),
-                );
-              },
-            ),
-          ],
+        title: Text(
+          widget.pseudo,
+          style: TextStyle(
+            color: AppColors.beige,
+            fontFamily: 'ReginaBlack',
+            fontSize: 20,
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -203,9 +189,18 @@ class _AdminChatPageState extends State<AdminChatPage> {
                 }
 
                 final messages = snapshot.data!.docs;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.jumpTo(
+                      _scrollController.position.maxScrollExtent,
+                    );
+                  }
+                });
+                DateTime? lastDate;
 
                 return ListView.builder(
-                  reverse: true,
+                  reverse: false,
+                  controller: _scrollController,
                   physics: const BouncingScrollPhysics(),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
@@ -217,109 +212,135 @@ class _AdminChatPageState extends State<AdminChatPage> {
                     final isAdmin = senderId == currentUid;
                     final timestamp =
                         (data['createdAt'] as Timestamp?)?.toDate();
-                    final isRead =
-                        data.containsKey('isRead') ? data['isRead'] : false;
+                    final isRead = data['isRead'] == true;
+                    final readAt = (data['readAt'] as Timestamp?)?.toDate();
                     final replyTo = data['replyTo'];
 
-                    bool sameSenderAsPrevious = false;
-                    if (index < messages.length - 1) {
-                      final previousSender =
-                          (messages[index + 1].data()
-                              as Map<String, dynamic>)['senderId'];
-                      sameSenderAsPrevious = previousSender == senderId;
+                    final showMeta = index == messages.length - 1;
+
+                    final widgets = <Widget>[];
+
+                    if (timestamp != null &&
+                        (lastDate == null ||
+                            !isSameDay(timestamp, lastDate!))) {
+                      lastDate = timestamp;
+                      widgets.add(
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Center(
+                            child: Text(
+                              '${timestamp.day}/${timestamp.month}/${timestamp.year}',
+                              style: TextStyle(
+                                color: AppColors.beige.withOpacity(0.6),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
                     }
 
-                    return Align(
-                      alignment:
-                          isAdmin
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                      child: GestureDetector(
-                        onLongPress: () {
-                          setState(() {
-                            _replyToMessage = text;
-                          });
-                        },
-                        child: Column(
-                          crossAxisAlignment:
-                              isAdmin
-                                  ? CrossAxisAlignment.end
-                                  : CrossAxisAlignment.start,
-                          children: [
-                            if (replyTo != null && replyTo.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 16,
-                                  right: 16,
-                                  bottom: 4,
-                                ),
-                                child: Text(
-                                  '↪ $replyTo',
-                                  style: TextStyle(
-                                    color: AppColors.beige.withOpacity(0.5),
-                                    fontStyle: FontStyle.italic,
-                                    fontSize: 12,
+                    widgets.add(
+                      Align(
+                        alignment:
+                            isAdmin
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                        child: GestureDetector(
+                          onLongPress: () {
+                            setState(() {
+                              _replyToMessage = text;
+                            });
+                          },
+                          child: Column(
+                            crossAxisAlignment:
+                                isAdmin
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                            children: [
+                              if (replyTo != null && replyTo.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: 16,
+                                    right: 16,
+                                    bottom: 4,
+                                  ),
+                                  child: Text(
+                                    '↪ $replyTo',
+                                    style: TextStyle(
+                                      color: AppColors.beige.withOpacity(0.5),
+                                      fontStyle: FontStyle.italic,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
+                              Container(
+                                margin: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                  horizontal: 12,
+                                ),
+                                padding: const EdgeInsets.all(12),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 280,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      isAdmin
+                                          ? AppColors.green
+                                          : AppColors.black.withOpacity(0.8),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: AppColors.green,
+                                    width: isAdmin ? 0 : 1,
+                                  ),
+                                ),
+                                child:
+                                    imageUrl != null
+                                        ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          child: Image.network(
+                                            imageUrl,
+                                            width: 200,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                        : Text(
+                                          text,
+                                          style: TextStyle(
+                                            color: AppColors.beige,
+                                            fontFamily: 'Roboto',
+                                            fontSize: 14,
+                                          ),
+                                        ),
                               ),
-                            Container(
-                              margin: EdgeInsets.only(
-                                top: sameSenderAsPrevious ? 2 : 10,
-                                bottom: 2,
-                                left: 12,
-                                right: 12,
-                              ),
-                              padding: const EdgeInsets.all(12),
-                              constraints: const BoxConstraints(maxWidth: 280),
-                              decoration: BoxDecoration(
-                                color:
+                              if (showMeta && timestamp != null)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 2,
+                                  ),
+                                  child: Text(
                                     isAdmin
-                                        ? AppColors.green
-                                        : AppColors.black.withOpacity(0.8),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: AppColors.green,
-                                  width: isAdmin ? 0 : 1,
-                                ),
-                              ),
-                              child:
-                                  imageUrl != null
-                                      ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(16),
-                                        child: Image.network(
-                                          imageUrl,
-                                          width: 200,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      )
-                                      : Text(
-                                        text,
-                                        style: TextStyle(
-                                          color: AppColors.beige,
-                                          fontFamily: 'Roboto',
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                            ),
-                            if (index == 0 && timestamp != null)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 16,
-                                  right: 16,
-                                  bottom: 4,
-                                ),
-                                child: Text(
-                                  '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')} - ${isRead ? "Lu" : "Envoyé"}',
-                                  style: TextStyle(
-                                    color: AppColors.beige.withOpacity(0.5),
-                                    fontSize: 12,
+                                        ? (isRead && readAt != null
+                                            ? 'Vu à ${formatTime(readAt.toLocal())}'
+                                            : '${formatTime(timestamp.toLocal())} - Envoyé')
+                                        : 'Envoyé à ${formatTime(timestamp.toLocal())}',
+                                    style: TextStyle(
+                                      color: AppColors.beige.withOpacity(0.5),
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     );
+
+                    return Column(children: widgets);
                   },
                 );
               },
@@ -379,11 +400,11 @@ class _AdminChatPageState extends State<AdminChatPage> {
                   ),
                   IconButton(
                     icon: Icon(Icons.image, color: AppColors.beige),
-                    onPressed: () => _pickAndSendImage(chatId, currentUid),
+                    onPressed: () => _pickAndSendImage(currentUid),
                   ),
                   IconButton(
                     icon: Icon(Icons.send, color: AppColors.beige),
-                    onPressed: () => _sendTextMessage(chatId, currentUid),
+                    onPressed: () => _sendTextMessage(currentUid),
                   ),
                 ],
               ),

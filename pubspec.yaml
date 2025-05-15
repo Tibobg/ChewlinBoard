@@ -40,6 +40,7 @@ dependencies:
     sdk: flutter
   url_launcher: ^6.1.10
   flutter_launcher_icons: ^0.13.1
+  another_flushbar: ^1.12.30
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -83,6 +84,7 @@ flutter:
     - assets/images/logo-cercle.png
     - assets/models/skateboard.glb
     - assets/images/mockup-skate.png
+    - assets/audio/notif.mp3
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -29,6 +29,28 @@ class _AdminChatPageState extends State<AdminChatPage> {
     FirebaseFirestore.instance.collection('users').doc(currentUid).set({
       'lastSeen': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    final chatId =
+        widget.userUid.compareTo(currentUid) < 0
+            ? '${widget.userUid}_$currentUid'
+            : '${currentUid}_${widget.userUid}';
+
+    _markMessagesAsRead(chatId, currentUid);
+  }
+
+  Future<void> _markMessagesAsRead(String conversationId, String userId) async {
+    final query =
+        await FirebaseFirestore.instance
+            .collection('messages')
+            .doc(conversationId)
+            .collection('messages')
+            .where('senderId', isNotEqualTo: userId)
+            .where('isRead', isEqualTo: false)
+            .get();
+
+    for (final doc in query.docs) {
+      await doc.reference.update({'isRead': true});
+    }
   }
 
   Future<void> _sendTextMessage(String chatId, String senderId) async {

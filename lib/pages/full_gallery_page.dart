@@ -29,12 +29,27 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
 
   Future<void> fetchAllImages() async {
     final url =
-        "https://www.googleapis.com/drive/v3/files?q='$folderId'+in+parents+and+mimeType='image/jpeg'&orderBy=createdTime+desc&key=$apiKey&fields=files(id,name)";
+        "https://www.googleapis.com/drive/v3/files?q='$folderId'+in+parents+and+mimeType='image/jpeg'&fields=files(id,name)&key=$apiKey";
 
     final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       final files = data['files'] as List;
+
+      // Tri par nom de fichier décroissant (ex: 22.jpg à 1.jpg)
+      files.sort((a, b) {
+        final numA =
+            int.tryParse(
+              RegExp(r'(\d+)\.jpg').firstMatch(a['name'])?.group(1) ?? '0',
+            ) ??
+            0;
+        final numB =
+            int.tryParse(
+              RegExp(r'(\d+)\.jpg').firstMatch(b['name'])?.group(1) ?? '0',
+            ) ??
+            0;
+        return numB.compareTo(numA);
+      });
 
       final urls =
           files.map<String>((file) {
@@ -180,7 +195,7 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
-      debugPrint("Impossible d'ouvrir le lien : \$url");
+      debugPrint("Impossible d'ouvrir le lien : $url");
     }
   }
 
@@ -273,13 +288,13 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                       children: [
                         _buildSocialButton(
                           "Instagram",
-                          "https://www.instagram.com/chewlin.pics?igsh=MTNoenJmMXRhYXg3bQ==",
+                          "https://www.instagram.com/chewlin.pics",
                           Icons.camera_alt,
                           Colors.pink,
                         ),
                         _buildSocialButton(
                           "TikTok",
-                          "https://www.tiktok.com/@chewlincorp?_t=ZN-8wM4sgM4wmE&_r=1",
+                          "https://www.tiktok.com/@chewlincorp",
                           Icons.music_note,
                           Colors.black,
                         ),
@@ -302,8 +317,7 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                                         : 2,
                                 crossAxisSpacing: 12,
                                 mainAxisSpacing: 12,
-                                childAspectRatio:
-                                    0.5, // plus haut pour skateboard
+                                childAspectRatio: 0.5,
                               ),
                           delegate: SliverChildBuilderDelegate((
                             context,

@@ -19,14 +19,57 @@ class _UserChatPageState extends State<UserChatPage> {
   final TextEditingController _controller = TextEditingController();
   final String adminUid = 'wjGx853IYFTe2hrtNxrSvTKc23h1';
   String? _replyToMessage;
+  late final String chatId;
 
   @override
   void initState() {
     super.initState();
+
     final currentUid = FirebaseAuth.instance.currentUser!.uid;
+
+    chatId =
+        widget.userUid.compareTo(adminUid) < 0
+            ? '${widget.userUid}_$adminUid'
+            : '${adminUid}_${widget.userUid}';
+
     FirebaseFirestore.instance.collection('users').doc(currentUid).set({
       'lastSeen': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    _markMessagesAsRead(chatId, currentUid);
+  }
+
+  Future<void> _markMessagesAsRead(String conversationId, String userId) async {
+    final queryAll =
+        await FirebaseFirestore.instance
+            .collection('messages')
+            .doc(conversationId)
+            .collection('messages')
+            .get();
+
+    print('🔥 DEBUG : Tous les messages de $conversationId :');
+    for (final doc in queryAll.docs) {
+      final data = doc.data();
+      print(
+        '→ ${doc.id} | senderId: ${data['senderId']} | isRead: ${data['isRead']}',
+      );
+    }
+
+    final unreadQuery =
+        await FirebaseFirestore.instance
+            .collection('messages')
+            .doc(conversationId)
+            .collection('messages')
+            .where('senderId', isNotEqualTo: userId)
+            .where('isRead', isEqualTo: false)
+            .get();
+
+    print('🟡 Messages à marquer comme lus : ${unreadQuery.docs.length}');
+
+    for (final doc in unreadQuery.docs) {
+      await doc.reference.update({'isRead': true});
+      print('✅ ${doc.id} mis à jour en isRead: true');
+    }
   }
 
   Future<void> _sendTextMessage() async {
@@ -61,13 +104,9 @@ class _UserChatPageState extends State<UserChatPage> {
   }
 
   Future<void> _sendMessage({String? text, String? imageUrl}) async {
-    final chatId =
-        widget.userUid.compareTo(adminUid) < 0
-            ? '${widget.userUid}_$adminUid'
-            : '${adminUid}_${widget.userUid}';
-
+    final senderId = FirebaseAuth.instance.currentUser!.uid;
     final messageData = {
-      'senderId': widget.userUid,
+      'senderId': senderId,
       'text': text ?? '',
       'imageUrl': imageUrl,
       'createdAt': FieldValue.serverTimestamp(),
@@ -89,11 +128,6 @@ class _UserChatPageState extends State<UserChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final chatId =
-        widget.userUid.compareTo(adminUid) < 0
-            ? '${widget.userUid}_$adminUid'
-            : '${adminUid}_${widget.userUid}';
-
     final messagesRef = FirebaseFirestore.instance
         .collection('messages')
         .doc(chatId)

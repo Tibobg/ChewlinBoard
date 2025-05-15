@@ -67,13 +67,28 @@ class _DriveGalleryState extends State<DriveGallery> {
 
   Future<void> fetchImagesFromDrive() async {
     final url =
-        "https://www.googleapis.com/drive/v3/files?q='$folderId'+in+parents+and+mimeType='image/jpeg'&orderBy=createdTime+desc&key=$apiKey&fields=files(id,name)";
+        "https://www.googleapis.com/drive/v3/files?q='$folderId'+in+parents+and+mimeType='image/jpeg'&fields=files(id,name)&key=$apiKey";
 
     final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       final files = data['files'] as List;
+
+      // Trie les fichiers par numéro décroissant (ex: 22.jpg à 1.jpg)
+      files.sort((a, b) {
+        final numA =
+            int.tryParse(
+              RegExp(r'(\d+)\.jpg').firstMatch(a['name'])?.group(1) ?? '0',
+            ) ??
+            0;
+        final numB =
+            int.tryParse(
+              RegExp(r'(\d+)\.jpg').firstMatch(b['name'])?.group(1) ?? '0',
+            ) ??
+            0;
+        return numB.compareTo(numA);
+      });
 
       final urls =
           files.take(5).map<String>((file) {
@@ -92,7 +107,7 @@ class _DriveGalleryState extends State<DriveGallery> {
 
       startAutoScroll();
     } else {
-      print("Erreur lors de la récupération des images : ${response.body}");
+      print("Erreur lors de la récupération des images : \${response.body}");
     }
   }
 

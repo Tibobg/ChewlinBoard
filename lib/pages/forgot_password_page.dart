@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import 'login_page.dart';
 import '../services/auth_service.dart';
+import 'signup_page.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -16,6 +17,28 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   bool _isLoading = false;
 
   Future<void> _sendResetEmail() async {
+    final email = _emailController.text.trim();
+
+    if (email.toLowerCase() == "chewlincorp@gmail.com") {
+      showDialog(
+        context: context,
+        builder:
+            (_) => AlertDialog(
+              title: const Text("Nice try 😏"),
+              content: const Text(
+                "On ne reset pas le mot de passe du Grand Maître Chewlin 🐸",
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("OK"),
+                ),
+              ],
+            ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -63,43 +86,51 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 32),
-                      const Text(
-                        'ChewLinBoard',
-                        style: TextStyle(
-                          fontFamily: 'ReginaBlack',
-                          fontSize: 28,
-                          color: AppColors.beige,
+                      const SizedBox(height: 30),
+                      Center(
+                        child: Column(
+                          children: [
+                            const Text(
+                              'ChewLinBoard',
+                              style: TextStyle(
+                                fontFamily: 'ReginaBlack',
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.beige,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            ClipOval(
+                              child: Image.asset(
+                                'assets/images/logo-img.jpeg',
+                                height: 100,
+                                width: 100,
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            Image.asset(
+                              'assets/images/Logo-blanc.png',
+                              height: 30,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Image.asset('assets/images/logo-img.jpeg', height: 100),
                       const SizedBox(height: 32),
-
-                      const Text(
-                        'Email de récupération...',
-                        style: TextStyle(fontSize: 16, color: AppColors.beige),
-                      ),
-                      const SizedBox(height: 8),
                       TextField(
                         controller: _emailController,
                         style: const TextStyle(color: AppColors.beige),
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: AppColors.black.withOpacity(0.8),
+                          fillColor: AppColors.black,
                           hintText: 'Email de récupération...',
                           hintStyle: const TextStyle(color: AppColors.beige),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
                           ),
                         ),
                       ),
@@ -133,26 +164,23 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                 ),
                       ),
 
-                      const Spacer(),
-
                       TextButton(
                         onPressed: () {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const LoginPage(),
+                              builder: (_) => const SignUpPage(),
                             ),
                           );
                         },
                         child: const Text(
-                          "J'ai déjà un compte",
+                          "Créer un compte",
                           style: TextStyle(
                             color: AppColors.beige,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
                     ],
                   ),
                 ),

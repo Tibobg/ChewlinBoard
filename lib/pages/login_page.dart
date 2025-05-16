@@ -16,6 +16,7 @@ class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final AuthService _authService = AuthService();
+  bool _obscurePassword = true;
 
   bool _isLoading = false;
 
@@ -107,12 +108,12 @@ class _LoginPageState extends State<LoginPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 50),
                       TextField(
                         controller: emailController,
                         style: const TextStyle(color: AppColors.beige),
                         decoration: const InputDecoration(
-                          hintText: 'Email ou pseudo...',
+                          hintText: 'Email...',
                           hintStyle: TextStyle(color: AppColors.beige),
                           filled: true,
                           fillColor: AppColors.black,
@@ -124,15 +125,28 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: passwordController,
-                        obscureText: true,
+                        obscureText: _obscurePassword,
                         style: const TextStyle(color: AppColors.beige),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Mot de passe...',
-                          hintStyle: TextStyle(color: AppColors.beige),
+                          hintStyle: const TextStyle(color: AppColors.beige),
                           filled: true,
                           fillColor: AppColors.black,
-                          border: OutlineInputBorder(
+                          border: const OutlineInputBorder(
                             borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: AppColors.beige,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                           ),
                         ),
                       ),

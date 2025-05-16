@@ -14,6 +14,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController pseudoController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   final AuthService _authService = AuthService();
 
@@ -68,27 +69,42 @@ class _SignUpPageState extends State<SignUpPage> {
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 32),
-                      const Text(
-                        'ChewLinBoard',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.beige,
-                          fontFamily: 'ReginaBlack',
+                      const SizedBox(height: 30),
+
+                      Center(
+                        child: Column(
+                          children: [
+                            const Text(
+                              'ChewLinBoard',
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.beige,
+                                fontFamily: 'ReginaBlack',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ClipOval(
+                              child: Image.asset(
+                                'assets/images/logo-img.jpeg',
+                                height: 100,
+                                width: 100,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Image.asset(
+                              'assets/images/Logo-blanc.png',
+                              height: 30,
+                            ),
+                            const SizedBox(height: 10),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Image.asset('assets/images/logo-img.jpeg', height: 100),
-                      const SizedBox(height: 16),
                       TextField(
                         controller: emailController,
                         style: const TextStyle(color: AppColors.beige),
@@ -96,7 +112,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           hintText: 'Email...',
                           hintStyle: TextStyle(color: AppColors.beige),
                           filled: true,
-                          fillColor: Colors.black87,
+                          fillColor: AppColors.black,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.all(Radius.circular(12)),
                           ),
@@ -110,7 +126,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           hintText: 'Pseudo...',
                           hintStyle: TextStyle(color: AppColors.beige),
                           filled: true,
-                          fillColor: Colors.black87,
+                          fillColor: AppColors.black,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.all(Radius.circular(12)),
                           ),
@@ -119,15 +135,28 @@ class _SignUpPageState extends State<SignUpPage> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: passwordController,
-                        obscureText: true,
+                        obscureText: _obscurePassword,
                         style: const TextStyle(color: AppColors.beige),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Mot de passe...',
-                          hintStyle: TextStyle(color: AppColors.beige),
+                          hintStyle: const TextStyle(color: AppColors.beige),
                           filled: true,
-                          fillColor: Colors.black87,
-                          border: OutlineInputBorder(
+                          fillColor: AppColors.black,
+                          border: const OutlineInputBorder(
                             borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: AppColors.beige,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                           ),
                         ),
                       ),
@@ -136,12 +165,9 @@ class _SignUpPageState extends State<SignUpPage> {
                         onPressed: _isLoading ? null : _signUp,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.green,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 40,
-                            vertical: 14,
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                         child:
@@ -152,9 +178,9 @@ class _SignUpPageState extends State<SignUpPage> {
                                 : const Text(
                                   'Créer un compte',
                                   style: TextStyle(
-                                    fontSize: 18,
-                                    color: AppColors.beige,
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: AppColors.beige,
                                   ),
                                 ),
                       ),
@@ -166,11 +192,15 @@ class _SignUpPageState extends State<SignUpPage> {
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.green,
                           backgroundColor: AppColors.beige,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: const Text("J'ai déjà un compte"),
+                        child: const Text(
+                          "J'ai déjà un compte",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ],
                   ),

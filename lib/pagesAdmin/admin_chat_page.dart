@@ -21,6 +21,8 @@ class _AdminChatPageState extends State<AdminChatPage> {
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _picker = ImagePicker();
   String? _replyToMessage;
+  String? _editingMessageId;
+  String? _editingOriginalText;
 
   late final String chatId;
 
@@ -63,11 +65,105 @@ class _AdminChatPageState extends State<AdminChatPage> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    await _sendMessage(chatId: chatId, senderId: senderId, text: text);
-    _controller.clear();
-    setState(() {
-      _replyToMessage = null;
+    if (_editingMessageId != null) {
+      await FirebaseFirestore.instance
+          .collection('messages')
+          .doc(chatId)
+          .collection('messages')
+          .doc(_editingMessageId)
+          .update({'text': text, 'isEdited': true});
+      setState(() {
+        _editingMessageId = null;
+        _editingOriginalText = null;
+        _controller.clear();
+      });
+    } else {
+      await _sendMessage(chatId: chatId, senderId: senderId, text: text);
+      _controller.clear();
+      setState(() {
+        _replyToMessage = null;
+      });
+    }
+  }
+
+  Future<void> _deleteMessage(String messageId) async {
+    final docRef = FirebaseFirestore.instance
+        .collection('messages')
+        .doc(chatId)
+        .collection('messages')
+        .doc(messageId);
+
+    final doc = await docRef.get();
+    final data = doc.data();
+
+    if (data == null) return;
+
+    final imageUrl = data['imageUrl'];
+
+    if (imageUrl != null && imageUrl.toString().isNotEmpty) {
+      try {
+        final ref = FirebaseStorage.instance.refFromURL(imageUrl);
+        await ref.delete();
+      } catch (e) {
+        print('Erreur suppression image : $e');
+      }
+    }
+
+    await docRef.update({
+      'text': 'Message supprimé',
+      'imageUrl': null,
+      'isDeleted': true,
     });
+  }
+
+  void _showMessageOptions({
+    required String messageId,
+    required String text,
+    required bool isCurrentUser,
+    required bool hasImage,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.reply),
+              title: const Text('Répondre'),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  _replyToMessage = text;
+                });
+              },
+            ),
+            if (isCurrentUser && text != 'Message supprimé' && !hasImage)
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Modifier'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _editingMessageId = messageId;
+                    _editingOriginalText = text;
+                    _controller.text = text;
+                  });
+                },
+              ),
+            if (isCurrentUser)
+              ListTile(
+                leading: const Icon(Icons.delete),
+                title: const Text('Supprimer'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteMessage(messageId);
+                },
+              ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _pickAndSendImage(String senderId) async {
@@ -248,9 +344,12 @@ class _AdminChatPageState extends State<AdminChatPage> {
                                 : Alignment.centerLeft,
                         child: GestureDetector(
                           onLongPress: () {
-                            setState(() {
-                              _replyToMessage = text;
-                            });
+                            _showMessageOptions(
+                              messageId: message.id,
+                              text: text,
+                              isCurrentUser: isAdmin,
+                              hasImage: imageUrl != null,
+                            );
                           },
                           child: Column(
                             crossAxisAlignment:
@@ -315,6 +414,22 @@ class _AdminChatPageState extends State<AdminChatPage> {
                                           ),
                                         ),
                               ),
+                              if (data['isEdited'] == true)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: 20,
+                                    top: 2,
+                                  ),
+                                  child: Text(
+                                    'Modifié',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontStyle: FontStyle.italic,
+                                      color: AppColors.beige.withOpacity(0.4),
+                                    ),
+                                  ),
+                                ),
+
                               if (showMeta && timestamp != null)
                                 Padding(
                                   padding: const EdgeInsets.symmetric(

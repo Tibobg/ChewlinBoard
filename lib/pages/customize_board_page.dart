@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
+import 'package:firebase_storage/firebase_storage.dart';
 import '../theme/colors.dart';
 import '../widgets/app_header.dart';
 import '../pages/editor_board_page.dart';
+import '../models/project_data.dart';
 
 class CustomizeBoardPage extends StatefulWidget {
-  final String boardName;
+  final ProjectData project;
 
-  const CustomizeBoardPage({super.key, required this.boardName});
+  const CustomizeBoardPage({super.key, required this.project});
 
   @override
   State<CustomizeBoardPage> createState() => _CustomizeBoardPageState();
@@ -21,9 +23,7 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(
-      source: ImageSource.gallery,
-    ); // 📁 Galerie
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
       setState(() {
@@ -32,18 +32,37 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
     }
   }
 
-  void _onFinalize() {
+  Future<String> uploadImageToFirebase(File imageFile) async {
+    final fileName = DateTime.now().millisecondsSinceEpoch.toString();
+    final storageRef = FirebaseStorage.instance.ref().child(
+      'project_images/$fileName.jpg',
+    );
+    final uploadTask = await storageRef.putFile(imageFile);
+    return await uploadTask.ref.getDownloadURL();
+  }
+
+  Future<void> _onFinalize() async {
     if (_selectedImage != null && _descriptionController.text.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder:
-              (_) => EditorBoardPage(
-                userImage: _selectedImage!,
-                description: _descriptionController.text,
-              ),
-        ),
-      );
+      widget.project.description = _descriptionController.text;
+
+      // Upload image and store its URL
+      try {
+        final imageUrl = await uploadImageToFirebase(_selectedImage!);
+        widget.project.imagePaths = [imageUrl];
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EditorBoardPage(project: widget.project),
+          ),
+        );
+      } catch (e, stack) {
+        debugPrint('Erreur Firebase Storage : $e');
+        debugPrint('Stack trace : $stack');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erreur lors de l'envoi de l'image.")),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -98,7 +117,7 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
                     const SizedBox(height: 12),
                     Center(
                       child: Text(
-                        widget.boardName,
+                        widget.project.boardName,
                         style: const TextStyle(
                           color: AppColors.beige,
                           fontSize: 20,
@@ -107,8 +126,6 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // 🖊 Description
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -149,8 +166,6 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // 📷 Importer image
                     Center(
                       child: ElevatedButton.icon(
                         onPressed: _pickImage,
@@ -169,7 +184,6 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
                         ),
                       ),
                     ),
-
                     if (_selectedImage != null) ...[
                       const SizedBox(height: 12),
                       ClipRRect(
@@ -181,10 +195,7 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
                         ),
                       ),
                     ],
-
                     const SizedBox(height: 24),
-
-                    // ✅ Bouton finaliser
                     Center(
                       child: ElevatedButton(
                         onPressed: _onFinalize,
@@ -208,7 +219,6 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 32),
                   ],
                 ),

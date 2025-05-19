@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../theme/colors.dart';
 import '../widgets/app_header.dart';
 import '../pages/select_board_page.dart';
@@ -8,167 +11,245 @@ class ProjectPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, String>> projects = [
-      {
-        'name': 'Loaded Vanguard',
-        'price': '170€',
-        'image':
-            'assets/images/skate-sample.jpg', // assure-toi que ce fichier existe !
-      },
-      {
-        'name': 'Loaded Vanguard',
-        'price': '170€',
-        'image': 'assets/images/skate-sample.jpg',
-      },
-      {
-        'name': 'Loaded Vanguard',
-        'price': '170€',
-        'image': 'assets/images/skate-sample.jpg',
-      },
-      {
-        'name': 'Loaded Vanguard',
-        'price': '170€',
-        'image': 'assets/images/skate-sample.jpg',
-      },
-    ];
-
-    return Stack(
-      children: [
-        // 🌿 Background
-        Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/background.jpg'),
-              fit: BoxFit.cover,
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, userSnapshot) {
+        if (!userSnapshot.hasData) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(color: AppColors.green),
             ),
-          ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AppHeader(),
-                const SizedBox(height: 12),
-                const Text(
-                  'Vos projets',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.beige,
-                    fontFamily: 'ReginaBlack',
+          );
+        }
+
+        final userId = userSnapshot.data!.uid;
+
+        return Scaffold(
+          body: Stack(
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/background.jpg'),
+                    fit: BoxFit.cover,
                   ),
                 ),
-                Text(
-                  '${projects.length} projets en cours',
-                  style: const TextStyle(fontSize: 14, color: AppColors.beige),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: projects.length,
-                    itemBuilder: (context, index) {
-                      final project = projects[index];
-                      return Container(
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          gradient: LinearGradient(
-                            colors:
-                                index % 2 == 0
-                                    ? [AppColors.green, AppColors.black]
-                                    : [AppColors.beige, AppColors.black],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+              ),
+              SafeArea(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('projects')
+                      .where('userId', isEqualTo: userId)
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(includeMetadataChanges: true),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.green,
+                        ),
+                      );
+                    }
+
+                    final projects = snapshot.data?.docs ?? [];
+
+                    return ListView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      children: [
+                        const AppHeader(),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Vos projets',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.beige,
+                            fontFamily: 'ReginaBlack',
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            // 🖼️ Image
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.asset(
-                                project['image']!,
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    width: 60,
-                                    height: 60,
-                                    color: Colors.grey.shade300,
-                                    child: const Icon(Icons.error),
-                                  );
-                                },
+                        const SizedBox(height: 8),
+                        if (projects.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: Center(
+                              child: Text(
+                                'Aucun projet pour l’instant',
+                                style: TextStyle(color: AppColors.beige),
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            // 📄 Texte
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                        if (projects.isNotEmpty)
+                          ...projects.map((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final name = data['boardName'] ?? 'Sans nom';
+                            final price = data['boardPrice'] ?? '???';
+                            final image =
+                                (data['imagePaths'] != null &&
+                                        data['imagePaths'].isNotEmpty)
+                                    ? data['imagePaths'][0]
+                                    : null;
+
+                            return Container(
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                gradient: LinearGradient(
+                                  colors:
+                                      projects.indexOf(doc) % 2 == 0
+                                          ? [AppColors.green, AppColors.black]
+                                          : [AppColors.beige, AppColors.black],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: Row(
                                 children: [
-                                  Text(
-                                    project['name']!,
-                                    style: const TextStyle(
-                                      color: AppColors.beige,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Poppins',
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child:
+                                        image != null
+                                            ? Image.network(
+                                              image,
+                                              width: 60,
+                                              height: 60,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) => const Icon(
+                                                    Icons.broken_image,
+                                                    color: Colors.red,
+                                                  ),
+                                            )
+                                            : Container(
+                                              width: 60,
+                                              height: 60,
+                                              color: Colors.grey.shade300,
+                                              child: const Icon(
+                                                Icons.image_not_supported,
+                                              ),
+                                            ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(
+                                            color: AppColors.beige,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Poppins',
+                                          ),
+                                        ),
+                                        Text(
+                                          'Prix: $price',
+                                          style: const TextStyle(
+                                            color: AppColors.beige,
+                                            fontSize: 14,
+                                            fontFamily: 'Poppins',
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  Text(
-                                    'Prix: ${project['price']}',
-                                    style: const TextStyle(
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
                                       color: AppColors.beige,
-                                      fontSize: 14,
-                                      fontFamily: 'Poppins',
                                     ),
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder:
+                                            (ctx) => AlertDialog(
+                                              title: const Text(
+                                                "Supprimer ce projet ?",
+                                              ),
+                                              content: const Text(
+                                                "Cette action est irréversible.",
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        ctx,
+                                                        false,
+                                                      ),
+                                                  child: const Text("Annuler"),
+                                                ),
+                                                TextButton(
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        ctx,
+                                                        true,
+                                                      ),
+                                                  child: const Text(
+                                                    "Supprimer",
+                                                    style: TextStyle(
+                                                      color: Colors.red,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                      );
+
+                                      if (confirm == true) {
+                                        await FirebaseFirestore.instance
+                                            .collection('projects')
+                                            .doc(doc.id)
+                                            .delete();
+
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text("Projet supprimé."),
+                                          ),
+                                        );
+                                      }
+                                    },
                                   ),
                                 ],
                               ),
-                            ),
-                            // 🗑️ Bouton supprimer
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete,
-                                color: AppColors.beige,
-                              ),
-                              onPressed: () {
-                                // logique de suppression à ajouter
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                            );
+                          }),
+                        const SizedBox(height: 100),
+                      ],
+                    );
+                  },
                 ),
-              ],
-            ),
-          ),
-        ),
-        // ➕ Bouton flottant
-        Positioned(
-          bottom: 20,
-          right: 20,
-          child: FloatingActionButton(
-            backgroundColor: AppColors.green,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SelectBoardPage(),
+              ),
+              Positioned(
+                bottom: 20,
+                right: 20,
+                child: FloatingActionButton(
+                  backgroundColor: AppColors.green,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SelectBoardPage(),
+                      ),
+                    );
+                  },
+                  child: const Icon(Icons.add, color: AppColors.beige),
                 ),
-              );
-            },
-
-            child: const Icon(Icons.add, color: AppColors.beige),
+              ),
+            ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

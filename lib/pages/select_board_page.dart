@@ -3,6 +3,7 @@ import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../theme/colors.dart';
 import '../widgets/app_header.dart';
 import 'customize_board_page.dart';
+import '../models/project_data.dart'; // à créer si pas encore fait
 
 class SelectBoardPage extends StatefulWidget {
   const SelectBoardPage({super.key});
@@ -15,12 +16,25 @@ class _SelectBoardPageState extends State<SelectBoardPage> {
   int _currentIndex = 0;
 
   final List<Map<String, String>> _boards = [
-    {'name': 'Landyachtz Board', 'model': 'assets/models/skateboard.glb'},
-    // Ajouter d'autres boards ici
+    {
+      'name': 'Landyachtz Board',
+      'model': 'assets/models/skateboard.glb',
+      'price': '90€',
+    },
+    {'name': 'ST1', 'model': 'assets/models/ST1.glb', 'price': '110€'},
   ];
+
+  void _changeBoard(int direction) {
+    setState(() {
+      _currentIndex = (_currentIndex + direction) % _boards.length;
+      if (_currentIndex < 0) _currentIndex = _boards.length - 1;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final board = _boards[_currentIndex];
+
     return WillPopScope(
       onWillPop: () async {
         Navigator.pop(context);
@@ -56,7 +70,7 @@ class _SelectBoardPageState extends State<SelectBoardPage> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      _boards[_currentIndex]['name']!,
+                      board['name']!,
                       style: const TextStyle(
                         color: AppColors.beige,
                         fontSize: 20,
@@ -68,7 +82,6 @@ class _SelectBoardPageState extends State<SelectBoardPage> {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Carte contenant le modèle 3D
                           Container(
                             margin: const EdgeInsets.symmetric(horizontal: 40),
                             padding: const EdgeInsets.all(8),
@@ -76,18 +89,45 @@ class _SelectBoardPageState extends State<SelectBoardPage> {
                               color: AppColors.beige.withOpacity(0.95),
                               borderRadius: BorderRadius.circular(30),
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: ModelViewer(
-                                src: 'assets/models/skateboard.glb',
-                                alt: "Skateboard 3D",
-                                autoRotate: true,
-                                cameraControls: false,
-                                disableZoom: true,
-                                interactionPrompt: InteractionPrompt.none,
-                                cameraOrbit: '0deg 90deg 100%',
-                                backgroundColor: Colors.transparent,
-                              ),
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: ModelViewer(
+                                    key: ValueKey(board['model']),
+                                    src: board['model']!,
+                                    alt: board['name']!,
+                                    autoRotate: true,
+                                    cameraControls: false,
+                                    disableZoom: true,
+                                    interactionPrompt: InteractionPrompt.none,
+                                    cameraOrbit: '0deg 90deg 100%',
+                                    backgroundColor: Colors.transparent,
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 12,
+                                  right: 12,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade700,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      board['price']!,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           Align(
@@ -97,9 +137,7 @@ class _SelectBoardPageState extends State<SelectBoardPage> {
                                 Icons.arrow_back_ios,
                                 color: AppColors.beige,
                               ),
-                              onPressed: () {
-                                // navigation modèle précédent
-                              },
+                              onPressed: () => _changeBoard(-1),
                             ),
                           ),
                           Align(
@@ -109,9 +147,7 @@ class _SelectBoardPageState extends State<SelectBoardPage> {
                                 Icons.arrow_forward_ios,
                                 color: AppColors.beige,
                               ),
-                              onPressed: () {
-                                // navigation modèle suivant
-                              },
+                              onPressed: () => _changeBoard(1),
                             ),
                           ),
                         ],
@@ -120,17 +156,19 @@ class _SelectBoardPageState extends State<SelectBoardPage> {
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () {
+                        final project = ProjectData(
+                          boardName: board['name']!,
+                          boardPrice: board['price']!,
+                        );
+
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder:
-                                (_) => CustomizeBoardPage(
-                                  boardName: _boards[_currentIndex]['name']!,
-                                ),
+                                (_) => CustomizeBoardPage(project: project),
                           ),
                         );
                       },
-
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.green,
                         shape: RoundedRectangleBorder(

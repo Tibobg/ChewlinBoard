@@ -83,6 +83,7 @@ flutter:
     - assets/images/Logo-blanc.png
     - assets/images/logo-cercle.png
     - assets/models/skateboard.glb
+    - assets/models/ST1.glb
     - assets/images/mockup-skate.png
     - assets/audio/notif.mp3
 

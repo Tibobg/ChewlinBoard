@@ -12,14 +12,16 @@ import '../theme/colors.dart';
 import 'package:another_flushbar/flushbar.dart';
 
 class BottomNavContainer extends StatefulWidget {
-  const BottomNavContainer({super.key});
+  final int initialIndex;
+
+  const BottomNavContainer({super.key, this.initialIndex = 0});
 
   @override
   State<BottomNavContainer> createState() => _BottomNavContainerState();
 }
 
 class _BottomNavContainerState extends State<BottomNavContainer> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
   int unreadMessages = 0;
   StreamSubscription? _subscription;
 
@@ -34,6 +36,7 @@ class _BottomNavContainerState extends State<BottomNavContainer> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialIndex;
     _listenToUnreadMessages();
   }
 

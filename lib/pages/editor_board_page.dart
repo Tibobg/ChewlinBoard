@@ -1,18 +1,13 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../widgets/app_header.dart';
 import 'recap_board_page.dart';
+import '../models/project_data.dart';
 
 class EditorBoardPage extends StatefulWidget {
-  final File userImage;
-  final String description;
+  final ProjectData project;
 
-  const EditorBoardPage({
-    super.key,
-    required this.userImage,
-    required this.description,
-  });
+  const EditorBoardPage({super.key, required this.project});
 
   @override
   State<EditorBoardPage> createState() => _EditorBoardPageState();
@@ -21,10 +16,12 @@ class EditorBoardPage extends StatefulWidget {
 class _EditorBoardPageState extends State<EditorBoardPage> {
   Offset _imageOffset = const Offset(0, 0);
   double _scale = 1.0;
-  final double _imageBaseScaleFactor = 0.25; // 🔧 Ajuste cette valeur !
+  final double _imageBaseScaleFactor = 0.25;
 
   @override
   Widget build(BuildContext context) {
+    final String imagePath = widget.project.imagePaths?.first ?? '';
+
     return WillPopScope(
       onWillPop: () async {
         Navigator.pop(context);
@@ -34,7 +31,6 @@ class _EditorBoardPageState extends State<EditorBoardPage> {
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
-            // Fond feuillage
             Container(
               decoration: const BoxDecoration(
                 image: DecorationImage(
@@ -61,7 +57,6 @@ class _EditorBoardPageState extends State<EditorBoardPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // 🛹 Zone de design
                     Expanded(
                       child: Center(
                         child: Stack(
@@ -71,29 +66,36 @@ class _EditorBoardPageState extends State<EditorBoardPage> {
                               'assets/images/mockup-skate.png',
                               height: 400,
                             ),
-                            Transform.translate(
-                              offset: _imageOffset,
-                              child: Transform.scale(
-                                scale: _scale * _imageBaseScaleFactor,
-                                child: GestureDetector(
-                                  onPanUpdate: (details) {
-                                    setState(() {
-                                      _imageOffset += details.delta;
-                                    });
-                                  },
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.file(
-                                      widget.userImage,
-                                      fit: BoxFit.cover,
-                                      opacity: const AlwaysStoppedAnimation(
-                                        0.85,
+                            if (imagePath.isNotEmpty)
+                              Transform.translate(
+                                offset: _imageOffset,
+                                child: Transform.scale(
+                                  scale: _scale * _imageBaseScaleFactor,
+                                  child: GestureDetector(
+                                    onPanUpdate: (details) {
+                                      setState(() {
+                                        _imageOffset += details.delta;
+                                      });
+                                    },
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.network(
+                                        imagePath,
+                                        fit: BoxFit.cover,
+                                        opacity: const AlwaysStoppedAnimation(
+                                          0.85,
+                                        ),
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                const Icon(
+                                                  Icons.broken_image,
+                                                  color: Colors.red,
+                                                ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                       ),
@@ -123,21 +125,17 @@ class _EditorBoardPageState extends State<EditorBoardPage> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 12),
-                    //Suivant
+
                     ElevatedButton(
                       onPressed: () {
+                        widget.project.imagePosition = _imageOffset;
+                        widget.project.imageScale = _scale;
+
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder:
-                                (_) => RecapPage(
-                                  userImage: widget.userImage,
-                                  description: widget.description,
-                                  imageOffset: _imageOffset,
-                                  imageScale: _scale,
-                                ),
+                            builder: (_) => RecapPage(project: widget.project),
                           ),
                         );
                       },

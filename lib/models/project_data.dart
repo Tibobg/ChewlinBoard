@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProjectData {
+  String? projectId;
   final String boardName;
   final String boardPrice;
 
@@ -12,6 +13,7 @@ class ProjectData {
   DateTime? deliveryDate;
 
   ProjectData({
+    this.projectId,
     required this.boardName,
     required this.boardPrice,
     this.description,
@@ -40,20 +42,33 @@ class ProjectData {
   }
 
   // Pour récupérer les données depuis Firestore (optionnel)
-  factory ProjectData.fromMap(Map<String, dynamic> map) {
+  factory ProjectData.fromMap(Map<String, dynamic> map, {String? id}) {
+    Offset? position;
+    try {
+      if (map['imagePosition'] != null &&
+          map['imagePosition']['dx'] != null &&
+          map['imagePosition']['dy'] != null) {
+        position = Offset(
+          (map['imagePosition']['dx'] as num).toDouble(),
+          (map['imagePosition']['dy'] as num).toDouble(),
+        );
+      }
+    } catch (_) {}
+
     return ProjectData(
+      projectId: id,
       boardName: map['boardName'] ?? '',
       boardPrice: map['boardPrice'] ?? '',
       description: map['description'],
       imagePaths: List<String>.from(map['imagePaths'] ?? []),
-      imagePosition:
-          map['imagePosition'] != null
-              ? Offset(map['imagePosition']['dx'], map['imagePosition']['dy'])
+      imagePosition: position,
+      imageScale:
+          map['imageScale'] != null
+              ? (map['imageScale'] as num).toDouble()
               : null,
-      imageScale: map['imageScale'],
       deliveryDate:
           map['deliveryDate'] != null
-              ? DateTime.parse(map['deliveryDate'])
+              ? DateTime.tryParse(map['deliveryDate'])
               : null,
     );
   }

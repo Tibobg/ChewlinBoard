@@ -5,6 +5,7 @@ import '../navigation/bottom_nav_container.dart';
 import '../theme/colors.dart';
 import '../widgets/app_header.dart';
 import '../models/project_data.dart';
+import '../pages/editor_board_page.dart';
 
 class RecapPage extends StatelessWidget {
   final ProjectData project;
@@ -41,16 +42,70 @@ class RecapPage extends StatelessWidget {
     }
   }
 
+  Future<void> _saveAsDraft(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Utilisateur non connecté.")),
+      );
+      return;
+    }
+
+    try {
+      final data =
+          project.toMap(user.uid)
+            ..['isDraft'] = true
+            ..['lastStep'] = 'recap';
+
+      if (project.projectId != null) {
+        await FirebaseFirestore.instance
+            .collection('projects')
+            .doc(project.projectId)
+            .set(data, SetOptions(merge: true));
+      } else {
+        final docRef = await FirebaseFirestore.instance
+            .collection('projects')
+            .add(data);
+        project.projectId = docRef.id;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Projet enregistré en tant que brouillon"),
+        ),
+      );
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const BottomNavContainer(initialIndex: 2),
+        ),
+        (route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Erreur : $e")));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final imagePath = project.imagePaths?.first;
     final imageOffset = project.imagePosition ?? Offset.zero;
     final imageScale = project.imageScale ?? 1.0;
 
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.pop(context);
-        return false;
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        Future.microtask(() {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EditorBoardPage(project: project),
+            ),
+          );
+        });
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -174,27 +229,60 @@ class RecapPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => _saveProjectToFirestore(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.green,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _saveAsDraft(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.black,
+                              side: const BorderSide(color: AppColors.green),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                            child: const Text(
+                              'Brouillon',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppColors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 14,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _saveProjectToFirestore(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.green,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                            child: const Text(
+                              'Confirmer',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppColors.beige,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        'Confirmer',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: AppColors.beige,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      ],
                     ),
+
                     const SizedBox(height: 24),
                   ],
                 ),

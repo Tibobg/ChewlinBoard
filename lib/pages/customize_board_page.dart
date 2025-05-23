@@ -3,10 +3,14 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../theme/colors.dart';
 import '../widgets/app_header.dart';
 import '../pages/editor_board_page.dart';
 import '../models/project_data.dart';
+import '../navigation/bottom_nav_container.dart';
 
 class CustomizeBoardPage extends StatefulWidget {
   final ProjectData project;
@@ -20,6 +24,27 @@ class CustomizeBoardPage extends StatefulWidget {
 class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
   final TextEditingController _descriptionController = TextEditingController();
   File? _selectedImage;
+  bool _isFromNetwork = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.project.description != null) {
+      _descriptionController.text = widget.project.description!;
+    }
+
+    final paths = widget.project.imagePaths;
+    if (paths != null && paths.isNotEmpty) {
+      final first = paths.first;
+      if (first.startsWith('http')) {
+        _isFromNetwork = true;
+        _selectedImage = File(''); // just a placeholder
+      } else {
+        _selectedImage = File(first);
+      }
+    }
+  }
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -41,14 +66,74 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
     return await uploadTask.ref.getDownloadURL();
   }
 
+  Future<void> _onSaveAsDraft() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final description = _descriptionController.text.trim();
+    String? imageUrl;
+
+    if (_selectedImage != null) {
+      try {
+        imageUrl = await uploadImageToFirebase(_selectedImage!);
+      } catch (e) {
+        debugPrint(
+          'Erreur lors de l’upload de l’image pour le brouillon : \$e',
+        );
+      }
+    }
+
+    final projectData = {
+      'userId': user.uid,
+      'boardName': widget.project.boardName,
+      'description': description,
+      'imagePaths':
+          imageUrl != null ? [imageUrl] : widget.project.imagePaths ?? [],
+      'createdAt': FieldValue.serverTimestamp(),
+      'isDraft': true,
+      'lastStep': 'customize',
+    };
+
+    if (widget.project.projectId != null) {
+      await FirebaseFirestore.instance
+          .collection('projects')
+          .doc(widget.project.projectId)
+          .set(projectData, SetOptions(merge: true));
+    } else {
+      final docRef = await FirebaseFirestore.instance
+          .collection('projects')
+          .add(projectData);
+      widget.project.projectId = docRef.id;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Projet sauvegardé en tant que brouillon')),
+    );
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const BottomNavContainer(initialIndex: 2),
+      ),
+      (route) => false,
+    );
+  }
+
   Future<void> _onFinalize() async {
     if (_selectedImage != null && _descriptionController.text.isNotEmpty) {
       widget.project.description = _descriptionController.text;
 
-      // Upload image and store its URL
       try {
         final imageUrl = await uploadImageToFirebase(_selectedImage!);
         widget.project.imagePaths = [imageUrl];
+
+        if (widget.project.projectId != null) {
+          await FirebaseFirestore.instance
+              .collection('projects')
+              .doc(widget.project.projectId)
+              .set({'lastStep': 'customize'}, SetOptions(merge: true));
+        }
 
         Navigator.push(
           context,
@@ -188,36 +273,73 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
                       const SizedBox(height: 12),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          _selectedImage!,
-                          height: 150,
-                          fit: BoxFit.cover,
-                        ),
+                        child:
+                            _isFromNetwork
+                                ? Image.network(
+                                  widget.project.imagePaths!.first,
+                                  height: 150,
+                                  fit: BoxFit.cover,
+                                )
+                                : Image.file(
+                                  _selectedImage!,
+                                  height: 150,
+                                  fit: BoxFit.cover,
+                                ),
                       ),
                     ],
-                    const SizedBox(height: 24),
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: _onFinalize,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.green,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 40,
-                            vertical: 14,
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _onSaveAsDraft,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.black,
+                              side: const BorderSide(color: AppColors.green),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                            child: const Text(
+                              'Brouillon',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                        child: const Text(
-                          'Finaliser',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: AppColors.beige,
-                            fontWeight: FontWeight.bold,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _onFinalize,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.green,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                            child: const Text(
+                              'Continuer',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.beige,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                     const SizedBox(height: 32),
                   ],

@@ -3,6 +3,8 @@ import '../theme/colors.dart';
 import '../widgets/app_header.dart';
 import 'recap_board_page.dart';
 import '../models/project_data.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../pages/customize_board_page.dart';
 
 class EditorBoardPage extends StatefulWidget {
   final ProjectData project;
@@ -22,10 +24,17 @@ class _EditorBoardPageState extends State<EditorBoardPage> {
   Widget build(BuildContext context) {
     final String imagePath = widget.project.imagePaths?.first ?? '';
 
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.pop(context);
-        return false;
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        Future.microtask(() {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CustomizeBoardPage(project: widget.project),
+            ),
+          );
+        });
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -128,9 +137,23 @@ class _EditorBoardPageState extends State<EditorBoardPage> {
                     const SizedBox(height: 12),
 
                     ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         widget.project.imagePosition = _imageOffset;
                         widget.project.imageScale = _scale;
+
+                        if (widget.project.projectId != null) {
+                          await FirebaseFirestore.instance
+                              .collection('projects')
+                              .doc(widget.project.projectId)
+                              .set({
+                                'lastStep': 'editor',
+                                'imagePosition': {
+                                  'dx': _imageOffset.dx,
+                                  'dy': _imageOffset.dy,
+                                },
+                                'imageScale': _scale,
+                              }, SetOptions(merge: true));
+                        }
 
                         Navigator.push(
                           context,
@@ -139,6 +162,7 @@ class _EditorBoardPageState extends State<EditorBoardPage> {
                           ),
                         );
                       },
+
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.green,
                         padding: const EdgeInsets.symmetric(

@@ -1,0 +1,36 @@
+retour utilisateur app chewlin
+Home page, présenter mieux l'app, mettre des explications à chaque bloc
+prendre des meilleurs photos des skates
+enlever l'écran de chargement entre messages et homepage par exemple
+
+
+idée pour bien plus tard:
+photo de skate avec des pros
+
+idée possible mtn:
+plusieurs images par projet
+Dans la galerie, rajouter une possibilité d'acheter les planches
+Ajouter un système de suivi de commande
+Brouillon: mauvais chargement de l'image + gestion du bouton retour android
+système de paiement
+Ajouter une page équipement (roue, grip) + calendrier sélection date
+améliorer qualité pohoto galerie
+
+
+Mettre en place de la durabilité, si le serveur redémarre où à un problème, les données ne sont pas supprimés. Voir WAL à mettre en place
+COTE ADMIN DISCUSSION DISPARAIT SI L'UTILISATEUR ENVOI UNE IMAGE
+vérifier si jwt stocker dans cookie et pas en local
+système d'invalidation de jwt après un certain temps
+jamais de mdp dans jwt
+
+
+ancienne règle storage avant projet:
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /chat_images/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+  }
+}

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../navigation/bottom_nav_container.dart';
 
 class UserChatPage extends StatefulWidget {
   final String userUid;
@@ -248,7 +249,11 @@ class _UserChatPageState extends State<UserChatPage> {
 
     return WillPopScope(
       onWillPop: () async {
-        Navigator.pop(context);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => const BottomNavContainer(initialIndex: 0),
+          ),
+        );
         return false;
       },
       child: Scaffold(
@@ -268,7 +273,13 @@ class _UserChatPageState extends State<UserChatPage> {
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pushReplacementNamed(context, '/'),
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => const BottomNavContainer(initialIndex: 0),
+                ),
+              );
+            },
           ),
         ),
         body: Column(

@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/colors.dart';
 
 class FullGalleryPage extends StatefulWidget {
@@ -15,58 +14,27 @@ class FullGalleryPage extends StatefulWidget {
 }
 
 class _FullGalleryPageState extends State<FullGalleryPage> {
-  final String folderId = '1N6R2DfseVo9We6wRQoS-Mqdzc_tg5TtU';
-  final String apiKey = 'AIzaSyCxHIowhgMNEQCNCkINKGsFqztbix_4o_g';
+  String _sortBy = 'createdAt_desc';
 
-  List<String> imageUrls = [];
-  bool isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    fetchAllImages();
-  }
-
-  Future<void> fetchAllImages() async {
-    final url =
-        "https://www.googleapis.com/drive/v3/files?q='$folderId'+in+parents+and+mimeType='image/jpeg'&fields=files(id,name)&key=$apiKey";
-
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final files = data['files'] as List;
-
-      // Tri par nom de fichier décroissant (ex: 22.jpg à 1.jpg)
-      files.sort((a, b) {
-        final numA =
-            int.tryParse(
-              RegExp(r'(\d+)\.jpg').firstMatch(a['name'])?.group(1) ?? '0',
-            ) ??
-            0;
-        final numB =
-            int.tryParse(
-              RegExp(r'(\d+)\.jpg').firstMatch(b['name'])?.group(1) ?? '0',
-            ) ??
-            0;
-        return numB.compareTo(numA);
-      });
-
-      final urls =
-          files.map<String>((file) {
-            final id = file['id'];
-            return 'https://drive.google.com/thumbnail?id=$id&sz=w600';
-          }).toList();
-
-      setState(() {
-        imageUrls = urls;
-        isLoading = false;
-      });
-    } else {
-      print("Erreur lors de la récupération des images : ${response.body}");
+  Query<Map<String, dynamic>> getSortedQuery() {
+    final base = FirebaseFirestore.instance.collection('skateboards');
+    switch (_sortBy) {
+      case 'createdAt_asc':
+        return base.orderBy('createdAt', descending: false);
+      case 'price_asc':
+        return base
+            .where('isSold', isEqualTo: false)
+            .orderBy('price', descending: false);
+      case 'price_desc':
+        return base
+            .where('isSold', isEqualTo: false)
+            .orderBy('price', descending: true);
+      default:
+        return base.orderBy('createdAt', descending: true);
     }
   }
 
-  void showFullScreenGallery(int initialIndex) {
+  void showFullScreenGallery(List<DocumentSnapshot> docs, int initialIndex) {
     final PageController pageController = PageController(
       initialPage: initialIndex,
     );
@@ -108,16 +76,48 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                                     MediaQuery.of(context).size.height * 0.7,
                                 child: PageView.builder(
                                   controller: pageController,
-                                  itemCount: imageUrls.length,
+                                  itemCount: docs.length,
                                   onPageChanged:
                                       (index) =>
                                           setState(() => currentPage = index),
                                   itemBuilder: (context, index) {
-                                    return Center(
-                                      child: Image.network(
-                                        imageUrls[index],
-                                        fit: BoxFit.cover,
-                                      ),
+                                    final data =
+                                        docs[index].data()
+                                            as Map<String, dynamic>;
+                                    final imageUrl = data['imageUrl'] ?? '';
+                                    final thumbUrl =
+                                        data['thumbUrl'] ?? imageUrl;
+                                    final isSold = data['isSold'] ?? false;
+                                    return Stack(
+                                      children: [
+                                        Center(
+                                          child: CachedNetworkImage(
+                                            imageUrl: thumbUrl,
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          bottom: 20,
+                                          left: 20,
+                                          right: 20,
+                                          child: ElevatedButton(
+                                            onPressed: isSold ? null : () {},
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  isSold
+                                                      ? Colors.grey
+                                                      : Colors.green,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 12,
+                                                  ),
+                                            ),
+                                            child: Text(
+                                              isSold ? 'Vendu' : 'Acheter',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     );
                                   },
                                 ),
@@ -168,7 +168,7 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                             size: 32,
                           ),
                           onPressed: () {
-                            if (currentPage < imageUrls.length - 1) {
+                            if (currentPage < docs.length - 1) {
                               currentPage++;
                               pageController.animateToPage(
                                 currentPage,
@@ -195,7 +195,7 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
-      debugPrint("Impossible d'ouvrir le lien : $url");
+      debugPrint("Impossible d'ouvrir le lien : \$url");
     }
   }
 
@@ -301,51 +301,127 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                       ],
                     ),
                   ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                  isLoading
-                      ? const SliverFillRemaining(
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                      : SliverPadding(
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: DropdownButton<String>(
+                        value: _sortBy,
+                        dropdownColor: Colors.black,
+                        style: const TextStyle(color: Colors.white),
+                        iconEnabledColor: Colors.white,
+                        isExpanded: true,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'createdAt_desc',
+                            child: Text('Récent (desc)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'createdAt_asc',
+                            child: Text('Récent (asc)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'price_asc',
+                            child: Text('Prix croissant'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'price_desc',
+                            child: Text('Prix décroissant'),
+                          ),
+                        ],
+                        onChanged:
+                            (value) => setState(
+                              () => _sortBy = value ?? 'createdAt_desc',
+                            ),
+                      ),
+                    ),
+                  ),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: getSortedQuery().snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const SliverFillRemaining(
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      final docs = snapshot.data!.docs;
+                      return SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         sliver: SliverGrid(
                           gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount:
-                                    MediaQuery.of(context).size.width > 600
-                                        ? 3
-                                        : 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 0.5,
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 16,
+                                childAspectRatio: 1 / 2.0,
                               ),
                           delegate: SliverChildBuilderDelegate((
                             context,
                             index,
                           ) {
-                            final url = imageUrls[index];
+                            final data =
+                                docs[index].data() as Map<String, dynamic>;
+                            final imageUrl = data['imageUrl'] ?? '';
+                            final thumbUrl = data['thumbUrl'] ?? imageUrl;
+                            final isSold = data['isSold'] ?? false;
+                            final price = data['price'] ?? 'À définir';
                             return GestureDetector(
-                              onTap: () => showFullScreenGallery(index),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: CachedNetworkImage(
-                                  imageUrl: url,
-                                  fit: BoxFit.cover,
-                                  placeholder:
-                                      (context, url) => Container(
-                                        color: Colors.grey.shade800,
+                              onTap: () => showFullScreenGallery(docs, index),
+                              child: Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: AspectRatio(
+                                      aspectRatio:
+                                          1 /
+                                          2.0, // 🔥 pour un rendu plus vertical
+                                      child: CachedNetworkImage(
+                                        imageUrl: thumbUrl,
+                                        fit:
+                                            BoxFit
+                                                .cover, // 🧲 zoom naturel dans le cadre
+                                        placeholder:
+                                            (context, url) => const Center(
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            ),
+                                        errorWidget:
+                                            (context, url, error) =>
+                                                const Icon(Icons.error),
                                       ),
-                                  errorWidget:
-                                      (context, url, error) => const Icon(
-                                        Icons.error,
-                                        color: Colors.red,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
                                       ),
-                                ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isSold
+                                                ? Colors.grey.withOpacity(0.8)
+                                                : Colors.green.withOpacity(0.8),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        isSold ? 'Vendu' : price,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
-                          }, childCount: imageUrls.length),
+                          }, childCount: docs.length),
                         ),
-                      ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),

@@ -5,6 +5,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/colors.dart';
+import 'order_page.dart';
 
 class FullGalleryPage extends StatefulWidget {
   const FullGalleryPage({super.key});
@@ -81,6 +82,7 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                                       (index) =>
                                           setState(() => currentPage = index),
                                   itemBuilder: (context, index) {
+                                    final doc = docs[index];
                                     final data =
                                         docs[index].data()
                                             as Map<String, dynamic>;
@@ -101,12 +103,31 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                                           left: 20,
                                           right: 20,
                                           child: ElevatedButton(
-                                            onPressed: isSold ? null : () {},
+                                            onPressed:
+                                                isSold
+                                                    ? null
+                                                    : () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder:
+                                                              (_) => OrderPage(
+                                                                skateboard: {
+                                                                  'id': doc.id,
+                                                                  'imageUrl':
+                                                                      imageUrl,
+                                                                  'price':
+                                                                      data['price'],
+                                                                },
+                                                              ),
+                                                        ),
+                                                      );
+                                                    },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
                                                   isSold
                                                       ? Colors.grey
-                                                      : Colors.green,
+                                                      : AppColors.green,
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                     vertical: 12,
@@ -114,6 +135,10 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                                             ),
                                             child: Text(
                                               isSold ? 'Vendu' : 'Acheter',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: AppColors.beige,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -371,14 +396,10 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
                                     child: AspectRatio(
-                                      aspectRatio:
-                                          1 /
-                                          2.0, // 🔥 pour un rendu plus vertical
+                                      aspectRatio: 1 / 2.0,
                                       child: CachedNetworkImage(
                                         imageUrl: thumbUrl,
-                                        fit:
-                                            BoxFit
-                                                .cover, // 🧲 zoom naturel dans le cadre
+                                        fit: BoxFit.cover,
                                         placeholder:
                                             (context, url) => const Center(
                                               child:
@@ -401,8 +422,8 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                                       decoration: BoxDecoration(
                                         color:
                                             isSold
-                                                ? Colors.grey.withOpacity(0.8)
-                                                : Colors.green.withOpacity(0.8),
+                                                ? Colors.grey
+                                                : AppColors.green,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../pagesAdmin/admin_project_page.dart';
+import '../pagesAdmin/admin_home_page.dart';
 import '../pagesAdmin/admin_message_page.dart';
+import '../pagesAdmin/admin_orders_page.dart';
+import '../pagesAdmin/admin_inventory_page.dart';
+import '../pagesAdmin/admin_stats_page.dart';
 import '../theme/colors.dart';
 
 class AdminNavContainer extends StatefulWidget {
@@ -13,7 +16,13 @@ class AdminNavContainer extends StatefulWidget {
 class _AdminNavContainerState extends State<AdminNavContainer> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [AdminMessagePage(), AdminProjectPage()];
+  final List<Widget> _pages = const [
+    AdminHomePage(),
+    AdminMessagePage(),
+    AdminOrdersPage(),
+    AdminInventoryPage(),
+    AdminStatsPage(),
+  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -26,6 +35,7 @@ class _AdminNavContainerState extends State<AdminNavContainer> {
     return Scaffold(
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         backgroundColor: AppColors.black,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -40,8 +50,17 @@ class _AdminNavContainerState extends State<AdminNavContainer> {
           fontFamily: 'Poppins',
         ),
         items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
           BottomNavigationBarItem(icon: Icon(Icons.send), label: 'Messages'),
-          BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Projets'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_bag),
+            label: 'Orders',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.inventory),
+            label: 'Inventory',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Stats'),
         ],
       ),
     );

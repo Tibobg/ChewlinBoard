@@ -6,9 +6,14 @@ import '../widgets/drive_gallery.dart';
 import '../widgets/availability_calendar.dart';
 import '../widgets/app_header.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   Future<String?> _getPseudo() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
@@ -21,11 +26,117 @@ class HomePage extends StatelessWidget {
     return doc.data()?['pseudo'];
   }
 
+  Map<String, dynamic>? activeOrder;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchActiveOrder();
+  }
+
+  Future<void> fetchActiveOrder() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .where('userId', isEqualTo: uid)
+            .where('status', whereIn: ['payée', 'préparée', 'expédiée'])
+            .orderBy('timestamp', descending: true)
+            .limit(1)
+            .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      setState(() {
+        activeOrder = snapshot.docs.first.data();
+      });
+    }
+  }
+
+  double getProgressFromStatus(String status) {
+    switch (status) {
+      case 'payée':
+        return 0.25;
+      case 'préparée':
+        return 0.5;
+      case 'expédiée':
+        return 0.75;
+      case 'livrée':
+        return 1.0;
+      default:
+        return 0.0;
+    }
+  }
+
+  Widget buildOrderTrackingBlock() {
+    if (activeOrder == null) return const SizedBox.shrink();
+
+    final title = activeOrder!['skateboardTitle'] ?? 'Votre planche';
+    final status = activeOrder!['status'] ?? 'En cours';
+    final timestamp = (activeOrder!['timestamp'] as Timestamp?)?.toDate();
+    final formattedDate =
+        timestamp != null
+            ? "${timestamp.day}/${timestamp.month}/${timestamp.year}"
+            : 'Date inconnue';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Suivi de votre commande",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.beige,
+            fontFamily: 'ReginaBlack',
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              colors: [AppColors.green, AppColors.black],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Planche : $title',
+                style: const TextStyle(color: AppColors.beige),
+              ),
+              Text(
+                'Statut : $status',
+                style: const TextStyle(color: AppColors.beige),
+              ),
+              Text(
+                'Commande du : $formattedDate',
+                style: const TextStyle(color: AppColors.beige),
+              ),
+              const SizedBox(height: 10),
+              LinearProgressIndicator(
+                value: getProgressFromStatus(status),
+                backgroundColor: Colors.white24,
+                color: AppColors.green,
+                minHeight: 8,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // 🎨 Fond personnalisé
         Container(
           decoration: const BoxDecoration(
             image: DecorationImage(
@@ -37,7 +148,6 @@ class HomePage extends StatelessWidget {
         SafeArea(
           child: Scrollbar(
             thumbVisibility: true,
-            trackVisibility: false,
             thickness: 4,
             radius: const Radius.circular(10),
             interactive: true,
@@ -49,8 +159,7 @@ class HomePage extends StatelessWidget {
                 children: [
                   const AppHeader(),
                   const SizedBox(height: 16),
-
-                  // 👋 Texte personnalisé
+                  buildOrderTrackingBlock(),
                   FutureBuilder<String?>(
                     future: _getPseudo(),
                     builder: (context, snapshot) {
@@ -80,7 +189,6 @@ class HomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // Bloc 1 — Galerie
                   const Text(
                     "Mes dernières créations",
                     style: TextStyle(
@@ -106,7 +214,6 @@ class HomePage extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // Bloc 2 — Calendrier
                   const Text(
                     "Calendrier de disponibilité",
                     style: TextStyle(
@@ -124,40 +231,6 @@ class HomePage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const AvailabilityCalendar(),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Bloc 3 — Suivi
-                  const Text(
-                    "Suivi de votre commande",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.beige,
-                      fontFamily: 'ReginaBlack',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 80,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      gradient: const LinearGradient(
-                        colors: [AppColors.green, AppColors.black],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: const Text(
-                      "Fonctionnalité à venir",
-                      style: TextStyle(
-                        color: AppColors.beige,
-                        fontSize: 16,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
                   ),
 
                   const SizedBox(height: 24),

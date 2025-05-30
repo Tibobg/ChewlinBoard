@@ -32,6 +32,12 @@ class AdminMessagePage extends StatelessWidget {
         stream:
             messagesRef
                 .where('participants', arrayContains: currentUid)
+                .where(
+                  'updatedAt',
+                  isGreaterThanOrEqualTo: Timestamp.fromMillisecondsSinceEpoch(
+                    0,
+                  ),
+                )
                 .orderBy('updatedAt', descending: true)
                 .snapshots(),
         builder: (context, snapshot) {

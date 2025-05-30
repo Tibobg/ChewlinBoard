@@ -1,100 +1,277 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../theme/colors.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../pages/login_page.dart';
 import '../services/auth_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../theme/colors.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
-  Future<String?> _getPseudo() async {
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  String? pseudo;
+  String? email;
+  List<Map<String, dynamic>> orders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserData();
+    fetchOrders();
+  }
+
+  Future<void> fetchUserData() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return null;
+    if (user == null) return;
+    email = user.email;
 
     final doc =
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .get();
-    return doc.data()?['pseudo'];
+    if (doc.exists) {
+      setState(() {
+        pseudo = doc.data()?['pseudo'] ?? 'Utilisateur';
+      });
+    }
   }
 
-  void _logout(BuildContext context) async {
-    await AuthService().signOut();
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
+  Future<void> fetchOrders() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('orders')
+              .where('userId', isEqualTo: uid)
+              .orderBy('timestamp', descending: true)
+              .get();
+
+      final docs =
+          snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+
+      setState(() {
+        orders = docs;
+      });
+    } catch (e) {
+      print("Erreur lors de la récupération des commandes: $e");
+    }
+  }
+
+  dynamic convertTimestamps(dynamic data) {
+    if (data is Map) {
+      return data.map((key, value) => MapEntry(key, convertTimestamps(value)));
+    } else if (data is List) {
+      return data.map((item) => convertTimestamps(item)).toList();
+    } else if (data is Timestamp) {
+      return data.toDate().toIso8601String();
+    } else {
+      return data;
+    }
+  }
+
+  Future<void> exportUserData() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final userData = userDoc.data() ?? {};
+
+    final projectsSnap =
+        await FirebaseFirestore.instance
+            .collection('projects')
+            .where('userId', isEqualTo: uid)
+            .get();
+    final projectData =
+        projectsSnap.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return data;
+        }).toList();
+
+    final exportData = {'utilisateur': userData, 'projets': projectData};
+
+    final cleanedData = convertTimestamps(exportData);
+    final jsonStr = const JsonEncoder.withIndent('  ').convert(cleanedData);
+
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final filename = 'chewlinboard_export_$timestamp.json';
+
+    final directory = Directory('/storage/emulated/0/Download');
+    final file = File('${directory.path}/$filename');
+
+    await file.writeAsString(jsonStr);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('✅ Données exportées : ${file.path}')),
+      );
+    }
+  }
+
+  double getProgress(String status) {
+    switch (status) {
+      case 'payée':
+        return 0.25;
+      case 'préparée':
+        return 0.5;
+      case 'expédiée':
+        return 0.75;
+      case 'livrée':
+        return 1.0;
+      default:
+        return 0.0;
+    }
+  }
+
+  Widget buildOrderCard(Map<String, dynamic> order) {
+    final date = (order['timestamp'] as Timestamp?)?.toDate();
+    final formattedDate =
+        date != null
+            ? "${date.day}/${date.month}/${date.year}"
+            : "Date inconnue";
+    final title = order['skateboardTitle'] ?? "Planche";
+    final price = order['price'] ?? "€";
+    final status = order['status'] ?? "En cours";
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.black,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.green.withOpacity(0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "📅 $formattedDate",
+            style: const TextStyle(color: AppColors.beige),
+          ),
+          Text("🛹 $title", style: const TextStyle(color: AppColors.beige)),
+          Text("💸 $price €", style: const TextStyle(color: AppColors.beige)),
+          Text(
+            "⏳ Statut : $status",
+            style: const TextStyle(color: AppColors.beige),
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: getProgress(status),
+            minHeight: 6,
+            color: AppColors.green,
+            backgroundColor: Colors.white24,
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.pop(context);
-        return false;
-      },
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: AppColors.black,
+      appBar: AppBar(
         backgroundColor: AppColors.black,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
+        title: const Text(
+          'Profil',
+          style: TextStyle(fontFamily: 'ReginaBlack', color: AppColors.beige),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download, color: AppColors.beige),
+            tooltip: 'Exporter mes données',
+            onPressed: exportUserData,
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (pseudo != null || email != null) ...[
+                  Text(
+                    "Pseudo: $pseudo",
+                    style: const TextStyle(color: AppColors.beige),
+                  ),
+                  Text(
+                    "Email: $email",
+                    style: const TextStyle(color: AppColors.beige),
+                  ),
+                  const SizedBox(height: 20),
+                ],
                 const Text(
-                  "Mon profil",
+                  '📋 Mes commandes',
                   style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
                     color: AppColors.beige,
+                    fontFamily: 'ReginaBlack',
                   ),
                 ),
-                const SizedBox(height: 16),
-                if (user != null)
-                  FutureBuilder<String?>(
-                    future: _getPseudo(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const CircularProgressIndicator(
-                          color: AppColors.beige,
-                        );
-                      }
-                      return Text(
-                        "Pseudo : ${snapshot.data!}\nEmail : ${user.email}",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: AppColors.beige,
-                        ),
-                      );
-                    },
-                  ),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: () => _logout(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade700,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    "Se déconnecter",
-                    style: TextStyle(
-                      color: AppColors.beige,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child:
+                      orders.isEmpty
+                          ? const Text(
+                            'Aucune commande trouvée.',
+                            style: TextStyle(color: AppColors.beige),
+                          )
+                          : ListView.builder(
+                            itemCount: orders.length,
+                            itemBuilder: (context, index) {
+                              return buildOrderCard(orders[index]);
+                            },
+                          ),
                 ),
               ],
             ),
           ),
-        ),
+          Positioned(
+            bottom: 20,
+            left: 16,
+            right: 16,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () async {
+                await AuthService().signOut();
+                if (!context.mounted) return;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
+              },
+              child: const Text(
+                'Se déconnecter',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

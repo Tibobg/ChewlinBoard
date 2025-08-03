@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../navigation/bottom_nav_container.dart';
-import '../theme/colors.dart';
-import '../widgets/app_header.dart';
-import '../models/project_data.dart';
-import '../pages/editor_board_page.dart';
+import '../../navigation/bottom_nav_container.dart';
+import '../../theme/colors.dart';
+import '../../widgets/app_header.dart';
+import '../../models/project_data.dart';
+import 'editor_board_page.dart';
 
 class RecapPage extends StatelessWidget {
   final ProjectData project;

@@ -1,9 +1,9 @@
 import 'package:chewlin_board/navigation/admin_nav_container.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../navigation/bottom_nav_container.dart';
+import '../../navigation/bottom_nav_container.dart';
 import 'login_page.dart';
-import 'splash_screen.dart';
+import '../user/splash_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});

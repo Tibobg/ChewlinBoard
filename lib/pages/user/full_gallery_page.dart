@@ -4,14 +4,26 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../theme/colors.dart';
-import 'order_page.dart';
+import '../../theme/colors.dart';
+import '../project/order_page.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class FullGalleryPage extends StatefulWidget {
   const FullGalleryPage({super.key});
 
   @override
   State<FullGalleryPage> createState() => _FullGalleryPageState();
+}
+
+class CustomCacheManager {
+  static final BaseCacheManager instance = CacheManager(
+    Config(
+      'customGalleryCache',
+      stalePeriod: const Duration(days: 30),
+      maxNrOfCacheObjects: 200,
+    ),
+  );
 }
 
 class _FullGalleryPageState extends State<FullGalleryPage> {
@@ -87,14 +99,14 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                                         docs[index].data()
                                             as Map<String, dynamic>;
                                     final imageUrl = data['imageUrl'] ?? '';
-                                    final thumbUrl =
-                                        data['thumbUrl'] ?? imageUrl;
                                     final isSold = data['isSold'] ?? false;
                                     return Stack(
                                       children: [
                                         Center(
                                           child: CachedNetworkImage(
-                                            imageUrl: thumbUrl,
+                                            imageUrl: imageUrl,
+                                            cacheManager:
+                                                CustomCacheManager.instance,
                                             fit: BoxFit.contain,
                                           ),
                                         ),
@@ -338,11 +350,11 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                         items: const [
                           DropdownMenuItem(
                             value: 'createdAt_desc',
-                            child: Text('Récent (desc)'),
+                            child: Text('Plus récente'),
                           ),
                           DropdownMenuItem(
                             value: 'createdAt_asc',
-                            child: Text('Récent (asc)'),
+                            child: Text('Plus ancienne'),
                           ),
                           DropdownMenuItem(
                             value: 'price_asc',
@@ -369,6 +381,19 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                         );
                       }
                       final docs = snapshot.data!.docs;
+
+                      for (
+                        int i = 0;
+                        i < (docs.length < 4 ? docs.length : 4);
+                        i++
+                      ) {
+                        final data = docs[i].data() as Map<String, dynamic>;
+                        final thumbUrl = data['thumbUrl'] ?? data['imageUrl'];
+                        precacheImage(
+                          CachedNetworkImageProvider(thumbUrl),
+                          context,
+                        );
+                      }
                       return SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         sliver: SliverGrid(
@@ -401,10 +426,16 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
                                         imageUrl: thumbUrl,
                                         fit: BoxFit.cover,
                                         placeholder:
-                                            (context, url) => const Center(
-                                              child:
-                                                  CircularProgressIndicator(),
-                                            ),
+                                            (context, url) =>
+                                                Shimmer.fromColors(
+                                                  baseColor:
+                                                      Colors.grey.shade800,
+                                                  highlightColor:
+                                                      Colors.grey.shade600,
+                                                  child: Container(
+                                                    color: Colors.grey.shade800,
+                                                  ),
+                                                ),
                                         errorWidget:
                                             (context, url, error) =>
                                                 const Icon(Icons.error),

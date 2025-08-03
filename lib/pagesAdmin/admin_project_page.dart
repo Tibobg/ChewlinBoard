@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../pages/login_page.dart'; // ajuste le chemin si nécessaire
+import '../pages/auth/login_page.dart'; // ajuste le chemin si nécessaire
 
 class AdminProjectPage extends StatelessWidget {
   const AdminProjectPage({super.key});

@@ -6,11 +6,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../theme/colors.dart';
-import '../widgets/app_header.dart';
-import '../pages/editor_board_page.dart';
-import '../models/project_data.dart';
-import '../navigation/bottom_nav_container.dart';
+import '../../theme/colors.dart';
+import '../../widgets/app_header.dart';
+import 'editor_board_page.dart';
+import '../../models/project_data.dart';
+import '../../navigation/bottom_nav_container.dart';
 
 class CustomizeBoardPage extends StatefulWidget {
   final ProjectData project;

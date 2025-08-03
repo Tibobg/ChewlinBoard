@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:async/async.dart';
-import '../pages/home_page.dart';
-import '../pages/full_gallery_page.dart';
-import '../pages/project_page.dart';
-import '../pages/message_page.dart';
-import '../pages/profile_page.dart';
+import '../pages/user/home_page.dart';
+import '../pages/user/full_gallery_page.dart';
+import '../pages/project/project_page.dart';
+import '../pages/user/message_page.dart';
+import '../pages/user/profile_page.dart';
 import '../theme/colors.dart';
 import 'package:another_flushbar/flushbar.dart';
 
@@ -23,6 +23,7 @@ class BottomNavContainer extends StatefulWidget {
 class _BottomNavContainerState extends State<BottomNavContainer> {
   late int _selectedIndex;
   int unreadMessages = 0;
+  bool _hasInitialized = false;
   StreamSubscription? _subscription;
 
   final List<Widget> _pages = const [
@@ -68,7 +69,7 @@ class _BottomNavContainerState extends State<BottomNavContainer> {
     _subscription = StreamGroup.merge(streams).listen((event) {
       final count = event.docs.length;
 
-      if (count > unreadMessages && _selectedIndex != 3) {
+      if (_hasInitialized && count > unreadMessages && _selectedIndex != 3) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Flushbar(
@@ -89,6 +90,7 @@ class _BottomNavContainerState extends State<BottomNavContainer> {
       setState(() {
         unreadMessages = count;
       });
+      _hasInitialized = true;
     });
   }
 

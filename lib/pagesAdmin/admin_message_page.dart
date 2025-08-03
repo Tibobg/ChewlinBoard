@@ -73,8 +73,10 @@ class AdminMessagePage extends StatelessWidget {
                 builder: (context, userSnapshot) {
                   if (!userSnapshot.hasData) return const SizedBox.shrink();
 
-                  final userData =
-                      userSnapshot.data!.data() as Map<String, dynamic>;
+                  final rawData = userSnapshot.data!.data();
+                  if (rawData == null) return const SizedBox.shrink();
+
+                  final userData = rawData as Map<String, dynamic>;
                   final pseudo = userData['pseudo'] ?? 'Utilisateur';
                   final photoUrl = userData['photoUrl'];
 

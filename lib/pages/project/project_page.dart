@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../theme/colors.dart';
-import '../widgets/app_header.dart';
-import '../pages/select_board_page.dart';
+import '../../theme/colors.dart';
+import '../../widgets/app_header.dart';
+import 'select_board_page.dart';
 
 class ProjectPage extends StatelessWidget {
   const ProjectPage({super.key});

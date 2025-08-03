@@ -4,9 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../pages/login_page.dart';
-import '../services/auth_service.dart';
-import '../theme/colors.dart';
+import '../auth/login_page.dart';
+import '../../services/auth_service.dart';
+import 'terms_of_use_page.dart';
+import '../../theme/colors.dart';
+import 'user_order_details_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -148,35 +150,46 @@ class _ProfilePageState extends State<ProfilePage> {
     final price = order['price'] ?? "€";
     final status = order['status'] ?? "En cours";
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.black,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.green.withOpacity(0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "📅 $formattedDate",
-            style: const TextStyle(color: AppColors.beige),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => UserOrderDetailsPage(orderData: order),
           ),
-          Text("🛹 $title", style: const TextStyle(color: AppColors.beige)),
-          Text("💸 $price €", style: const TextStyle(color: AppColors.beige)),
-          Text(
-            "⏳ Statut : $status",
-            style: const TextStyle(color: AppColors.beige),
-          ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: getProgress(status),
-            minHeight: 6,
-            color: AppColors.green,
-            backgroundColor: Colors.white24,
-          ),
-        ],
+        );
+      },
+
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.black,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.green.withOpacity(0.5)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "📅 $formattedDate",
+              style: const TextStyle(color: AppColors.beige),
+            ),
+            Text("🛹 $title", style: const TextStyle(color: AppColors.beige)),
+            Text("💸 $price €", style: const TextStyle(color: AppColors.beige)),
+            Text(
+              "⏳ Statut : $status",
+              style: const TextStyle(color: AppColors.beige),
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: getProgress(status),
+              minHeight: 6,
+              color: AppColors.green,
+              backgroundColor: Colors.white24,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -193,10 +206,24 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.download, color: AppColors.beige),
-            tooltip: 'Exporter mes données',
-            onPressed: exportUserData,
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.policy, color: AppColors.beige),
+                tooltip: 'Conditions Générales d’Utilisation',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TermsOfUsePage()),
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.download, color: AppColors.beige),
+                tooltip: 'Exporter mes données',
+                onPressed: exportUserData,
+              ),
+            ],
           ),
         ],
       ),
@@ -230,9 +257,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 Expanded(
                   child:
                       orders.isEmpty
-                          ? const Text(
-                            'Aucune commande trouvée.',
-                            style: TextStyle(color: AppColors.beige),
+                          ? const Center(
+                            child: Text(
+                              'Aucune commande trouvée.',
+                              style: TextStyle(color: AppColors.beige),
+                            ),
                           )
                           : ListView.builder(
                             itemCount: orders.length,

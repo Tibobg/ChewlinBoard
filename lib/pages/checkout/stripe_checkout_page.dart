@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'success_page.dart';
+import '../user/success_page.dart';
 
 class StripeCheckoutPage extends StatefulWidget {
   final String checkoutUrl;

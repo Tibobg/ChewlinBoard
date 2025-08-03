@@ -43,13 +43,42 @@ class AuthService {
   /// Connexion d'un utilisateur existant
   Future<User?> signIn(String email, String password) async {
     try {
+      lastErrorMessage = null;
       UserCredential result = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
       return result.user;
     } on FirebaseAuthException catch (e) {
-      print("Erreur lors de la connexion: ${e.message}");
+      print("Erreur lors de la connexion: ${e.code} - ${e.message}");
+
+      switch (e.code) {
+        case 'user-not-found':
+          lastErrorMessage = "Aucun compte n'existe avec cet email.";
+          break;
+        case 'wrong-password':
+          lastErrorMessage = "Mot de passe incorrect.";
+          break;
+        case 'invalid-email':
+          lastErrorMessage = "L'email est mal formaté.";
+          break;
+        case 'too-many-requests':
+          lastErrorMessage =
+              "Trop de tentatives, veuillez réessayer plus tard.";
+          break;
+        case 'network-request-failed':
+          lastErrorMessage = "Problème de connexion réseau.";
+          break;
+        case 'invalid-credential':
+          lastErrorMessage = "Email ou mot de passe incorrect.";
+          break;
+        default:
+          lastErrorMessage = "Erreur inconnue (${e.code}) : ${e.message}";
+      }
+
+      return null;
+    } catch (e) {
+      lastErrorMessage = "Erreur inattendue : ${e.toString()}";
       return null;
     }
   }

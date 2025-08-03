@@ -3,14 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../theme/colors.dart';
+import '../../theme/colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../navigation/bottom_nav_container.dart';
+import '../../navigation/bottom_nav_container.dart';
 
 class UserChatPage extends StatefulWidget {
-  final String userUid;
-
-  const UserChatPage({super.key, required this.userUid});
+  const UserChatPage({super.key});
 
   @override
   State<UserChatPage> createState() => _UserChatPageState();
@@ -24,17 +22,17 @@ class _UserChatPageState extends State<UserChatPage> {
   String? _editingMessageId;
   String? _editingOriginalText;
   late final String chatId;
+  late final String currentUid;
 
   @override
   void initState() {
     super.initState();
-
-    final currentUid = FirebaseAuth.instance.currentUser!.uid;
+    currentUid = FirebaseAuth.instance.currentUser!.uid;
 
     chatId =
-        widget.userUid.compareTo(adminUid) < 0
-            ? '${widget.userUid}_$adminUid'
-            : '${adminUid}_${widget.userUid}';
+        currentUid.compareTo(adminUid) < 0
+            ? '${currentUid}_$adminUid'
+            : '${adminUid}_$currentUid';
 
     FirebaseFirestore.instance.collection('users').doc(currentUid).set({
       'lastSeen': FieldValue.serverTimestamp(),
@@ -116,7 +114,7 @@ class _UserChatPageState extends State<UserChatPage> {
         await docRef.collection('messages').add(messageData);
 
         await docRef.set({
-          'participants': [widget.userUid, senderId],
+          'participants': [currentUid, senderId],
           'lastMessage': '📷 Image',
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -145,7 +143,7 @@ class _UserChatPageState extends State<UserChatPage> {
     await docRef.collection('messages').add(messageData);
 
     await docRef.set({
-      'participants': [widget.userUid, adminUid],
+      'participants': [currentUid, adminUid],
       'lastMessage': text ?? '📷 Image',
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -314,7 +312,7 @@ class _UserChatPageState extends State<UserChatPage> {
                       final imageUrl = data['imageUrl'];
                       final senderId = data['senderId'];
                       final currentUid = FirebaseAuth.instance.currentUser!.uid;
-                      final isUser = senderId == widget.userUid;
+                      final isUser = senderId == currentUid;
                       final isCurrentUser = senderId == currentUid;
                       final timestamp =
                           (data['createdAt'] as Timestamp?)?.toDate();

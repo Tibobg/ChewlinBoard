@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../theme/colors.dart';
-import '../navigation/bottom_nav_container.dart';
+import '../../services/auth_service.dart';
+import '../../theme/colors.dart';
+import '../../navigation/bottom_nav_container.dart';
+import '../user/terms_of_use_page.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -75,7 +76,6 @@ class _SignUpPageState extends State<SignUpPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const SizedBox(height: 30),
-
                       Center(
                         child: Column(
                           children: [
@@ -202,7 +202,31 @@ class _SignUpPageState extends State<SignUpPage> {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
+                      const SizedBox(height: 40),
                     ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 24,
+              left: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TermsOfUsePage()),
+                  );
+                },
+                child: const Center(
+                  child: Text(
+                    'Conditions Générales d’Utilisation',
+                    style: TextStyle(
+                      color: AppColors.beige,
+                      decoration: TextDecoration.underline,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),

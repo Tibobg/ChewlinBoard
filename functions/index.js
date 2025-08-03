@@ -18,6 +18,11 @@ exports.onNewSkateboardUpload = functions
     const filePath = object.name;
     if (!filePath.startsWith('skateboards_fini/')) return;
 
+        if (filePath.includes('thumbs/')) {
+      console.log('🛑 Miniature détectée, on ignore.');
+      return;
+    }
+
     const fileName = path.basename(filePath);
     const bucket = storage.bucket(object.bucket);
     const tempFilePath = path.join(os.tmpdir(), fileName);
@@ -31,6 +36,7 @@ exports.onNewSkateboardUpload = functions
 
     // Créer une version compressée (500px largeur max)
     await sharp(tempFilePath)
+      .rotate()
       .resize({ width: 500 })
       .toFile(path.join(os.tmpdir(), 'thumb_' + fileName));
 
@@ -40,16 +46,9 @@ exports.onNewSkateboardUpload = functions
       metadata: metadata,
     });
 
-    // Générer URLs signées
-    const [imageUrl] = await bucket.file(filePath).getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
-    });
-
-    const [thumbUrl] = await bucket.file(thumbPath).getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
-    });
+    // Générer URLs image
+    const imageUrl = `https://firebasestorage.googleapis.com/v0/b/chewlinboard-7a16f.firebasestorage.app/o/${encodeURIComponent(filePath)}?alt=media`;
+    const thumbUrl = `https://firebasestorage.googleapis.com/v0/b/chewlinboard-7a16f.firebasestorage.app/o/${encodeURIComponent(thumbPath)}?alt=media`;
 
     const fileNameNoExt = fileName.split('.').slice(0, -1).join('.');
     const priceMatch = fileNameNoExt.match(/_(\d+)/);

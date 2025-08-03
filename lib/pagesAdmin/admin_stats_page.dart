@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../theme/colors.dart';
-import '../pages/login_page.dart';
+import '../pages/auth/login_page.dart';
 import '../services/auth_service.dart';
 
 class AdminStatsPage extends StatefulWidget {

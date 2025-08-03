@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
-import '../theme/colors.dart';
-import '../widgets/app_header.dart';
+import '../../theme/colors.dart';
+import '../../widgets/app_header.dart';
 import 'customize_board_page.dart';
-import '../models/project_data.dart'; // à créer si pas encore fait
+import '../../models/project_data.dart'; // à créer si pas encore fait
 
 class SelectBoardPage extends StatefulWidget {
   const SelectBoardPage({super.key});

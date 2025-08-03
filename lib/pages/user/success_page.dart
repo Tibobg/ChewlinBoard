@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../theme/colors.dart';
-import '../services/order_service.dart';
+import '../../theme/colors.dart';
+import '../../services/order_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SuccessPage extends StatefulWidget {
   final String skateboardId;
@@ -32,6 +34,9 @@ class _SuccessPageState extends State<SuccessPage> {
   }
 
   Future<void> _saveOrder() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
     await OrderService.saveOrder(
       skateboardId: widget.skateboardId,
       buyerName: widget.buyerName,
@@ -40,6 +45,36 @@ class _SuccessPageState extends State<SuccessPage> {
       buyerAddress: widget.buyerAddress,
       price: widget.price,
     );
+    await sendConfirmationMessage(currentUser.uid);
+  }
+
+  Future<void> sendConfirmationMessage(String userId) async {
+    final adminUid = 'wjGx853IYFTe2hrtNxrSvTKc23h1';
+
+    final chatId =
+        userId.compareTo(adminUid) < 0
+            ? '${userId}_$adminUid'
+            : '${adminUid}_$userId';
+
+    final messageText =
+        '✅ Votre commande a bien été validée. Merci pour votre achat !';
+
+    await FirebaseFirestore.instance
+        .collection('messages')
+        .doc(chatId)
+        .collection('messages')
+        .add({
+          'senderId': adminUid,
+          'text': messageText,
+          'createdAt': Timestamp.now(),
+          'isRead': false,
+        });
+
+    await FirebaseFirestore.instance.collection('messages').doc(chatId).set({
+      'participants': [userId, adminUid],
+      'lastMessage': messageText,
+      'updatedAt': Timestamp.now(),
+    }, SetOptions(merge: true));
   }
 
   @override

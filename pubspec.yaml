@@ -43,6 +43,7 @@ dependencies:
   another_flushbar: ^1.12.30
   webview_flutter: ^4.4.2
   fl_chart: ^1.0.0
+  flutter_cache_manager: ^3.3.1
   # bouton exporter mes données utilisateurs
   path_provider: ^2.0.11
   file_saver: ^0.2.2

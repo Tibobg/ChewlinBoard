@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../theme/colors.dart';
+import '../../theme/colors.dart';
 import 'login_page.dart';
-import '../services/auth_service.dart';
+import '../../services/auth_service.dart';
 import 'signup_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -26,7 +27,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             (_) => AlertDialog(
               title: const Text("Nice try 😏"),
               content: const Text(
-                "On ne reset pas le mot de passe du Grand Maître Chewlin 🐸",
+                "On ne reset pas le mot de passe du Grand Maître Chewlin",
               ),
               actions: [
                 TextButton(
@@ -42,18 +43,28 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _authService.sendPasswordResetEmail(_emailController.text.trim());
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email de réinitialisation envoyé !')),
+      final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(
+        email,
       );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
+      if (methods.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Aucun compte n'est associé à cet email."),
+          ),
+        );
+      } else {
+        await _authService.sendPasswordResetEmail(email);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Email de réinitialisation envoyé !')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(
         context,

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../theme/colors.dart';
-import '../widgets/app_header.dart';
+import '../../theme/colors.dart';
+import '../../widgets/app_header.dart';
 import 'recap_board_page.dart';
-import '../models/project_data.dart';
+import '../../models/project_data.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../pages/customize_board_page.dart';
+import 'customize_board_page.dart';
 
 class EditorBoardPage extends StatefulWidget {
   final ProjectData project;

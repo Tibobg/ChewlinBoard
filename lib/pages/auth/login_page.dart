@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import '../theme/colors.dart';
+import '../../theme/colors.dart';
 import 'signup_page.dart';
 import 'forgot_password_page.dart';
-import '../services/auth_service.dart';
-import '../pages/auth_gate.dart';
+import '../../services/auth_service.dart';
+import 'auth_gate.dart';
+import '../user/terms_of_use_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,7 +20,6 @@ class _LoginPageState extends State<LoginPage> {
   final passwordController = TextEditingController();
   final AuthService _authService = AuthService();
   bool _obscurePassword = true;
-
   bool _isLoading = false;
 
   Future<void> _login() async {
@@ -38,18 +40,41 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     if (user != null) {
-      // ✅ On redirige vers AuthGate, qui gère la logique admin/utilisateur
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AuthGate()),
-      );
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+      if (!userDoc.exists || userDoc.data()?['pseudo'] == null) {
+        await FirebaseAuth.instance.signOut(); // Déconnexion
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Ce compte n\'existe pas encore. Veuillez vous inscrire.',
+            ),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AuthGate()),
+        );
+      }
     } else {
+      final message = AuthService.lastErrorMessage ?? 'Connexion échouée.';
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Connexion échouée.')));
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
 
     setState(() => _isLoading = false);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    FirebaseAuth.instance.signOut();
   }
 
   @override
@@ -212,7 +237,31 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 40),
                     ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 24,
+              left: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TermsOfUsePage()),
+                  );
+                },
+                child: const Center(
+                  child: Text(
+                    'Conditions Générales d’Utilisation',
+                    style: TextStyle(
+                      color: AppColors.beige,
+                      decoration: TextDecoration.underline,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),

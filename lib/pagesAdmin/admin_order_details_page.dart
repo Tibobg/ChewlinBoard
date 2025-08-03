@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/colors.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminOrderDetailsPage extends StatefulWidget {
   final Map<String, dynamic> orderData;
@@ -13,6 +14,7 @@ class AdminOrderDetailsPage extends StatefulWidget {
 }
 
 class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
+  String? userPseudo;
   Map<String, dynamic>? boardData;
   late TextEditingController nameController;
   late TextEditingController addressController;
@@ -32,6 +34,24 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
       text: widget.orderData['price'].toString(),
     );
     fetchBoard();
+    fetchLatestOrder();
+    fetchUserPseudo();
+  }
+
+  Future<void> fetchUserPseudo() async {
+    final userId = widget.orderData['userId'];
+    if (userId != null) {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .get();
+      if (doc.exists) {
+        setState(() {
+          userPseudo = doc.data()?['pseudo'] ?? 'Utilisateur inconnu';
+        });
+      }
+    }
   }
 
   Future<void> fetchBoard() async {
@@ -53,6 +73,24 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
     });
   }
 
+  Future<void> fetchLatestOrder() async {
+    final orderId = widget.orderData['id'];
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(orderId)
+            .get();
+    if (doc.exists) {
+      final data = doc.data()!;
+      setState(() {
+        nameController.text = data['name'] ?? '';
+        addressController.text = data['address'] ?? '';
+        priceController.text = data['price'].toString();
+        selectedStatus = data['status'] ?? selectedStatus;
+      });
+    }
+  }
+
   Future<void> updateField(String field, dynamic value) async {
     await FirebaseFirestore.instance
         .collection('orders')
@@ -64,16 +102,11 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
     final userId = widget.orderData['userId'];
     if (userId == null) return;
 
-    // Rechercher le bon chat dans la collection "messages"
-    final query =
-        await FirebaseFirestore.instance
-            .collection('messages')
-            .where('participants', arrayContains: userId)
-            .get();
-
-    if (query.docs.isEmpty) return;
-
-    final chatId = query.docs.first.id;
+    final adminUid = FirebaseAuth.instance.currentUser!.uid;
+    final chatId =
+        userId.compareTo(adminUid) < 0
+            ? '${userId}_$adminUid'
+            : '${adminUid}_$userId';
 
     String messageText;
     switch (status) {
@@ -94,22 +127,24 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
         return;
     }
 
+    // Enregistre le message dans la sous-collection
     await FirebaseFirestore.instance
         .collection('messages')
         .doc(chatId)
         .collection('messages')
         .add({
-          'senderId': 'admin',
+          'senderId': 'adminUid',
           'text': messageText,
-          'timestamp': Timestamp.now(),
-          'seen': false,
+          'createdAt': Timestamp.now(), // <-- clé attendue
+          'isRead': false,
         });
 
-    // Met à jour le champ "lastMessage" dans le chat principal
-    await FirebaseFirestore.instance.collection('messages').doc(chatId).update({
+    // Met à jour le chat principal
+    await FirebaseFirestore.instance.collection('messages').doc(chatId).set({
+      'participants': [userId, adminUid],
       'lastMessage': messageText,
       'updatedAt': Timestamp.now(),
-    });
+    }, SetOptions(merge: true));
   }
 
   Future<void> deleteOrder() async {
@@ -127,6 +162,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
             .doc(boardId)
             .update({'isSold': false});
       }
+      await sendCancelMessage();
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -140,6 +176,35 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
         ).showSnackBar(SnackBar(content: Text("Erreur : $e")));
       }
     }
+  }
+
+  Future<void> sendCancelMessage() async {
+    final adminUid = FirebaseAuth.instance.currentUser!.uid;
+    final userId = widget.orderData['userId'];
+
+    final chatId =
+        userId.compareTo(adminUid) < 0
+            ? '${userId}_$adminUid'
+            : '${adminUid}_$userId';
+
+    final messageText = '❌ Votre commande a été annulée par Chewlin.';
+
+    await FirebaseFirestore.instance
+        .collection('messages')
+        .doc(chatId)
+        .collection('messages')
+        .add({
+          'senderId': 'adminUid',
+          'text': messageText,
+          'createdAt': Timestamp.now(),
+          'isRead': false,
+        });
+
+    await FirebaseFirestore.instance.collection('messages').doc(chatId).set({
+      'participants': [userId, adminUid],
+      'lastMessage': messageText,
+      'updatedAt': Timestamp.now(),
+    }, SetOptions(merge: true));
   }
 
   Widget buildEditableField({
@@ -181,9 +246,26 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
       appBar: AppBar(
         backgroundColor: AppColors.black,
         centerTitle: true,
-        title: const Text(
-          'Détails commande',
-          style: TextStyle(fontFamily: 'ReginaBlack', color: AppColors.beige),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text(
+              'Détails commande',
+              style: TextStyle(
+                fontFamily: 'ReginaBlack',
+                color: AppColors.beige,
+              ),
+            ),
+            if (userPseudo != null)
+              Text(
+                '$userPseudo',
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppColors.beige,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+          ],
         ),
         actions: [
           IconButton(
@@ -207,7 +289,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
                         borderRadius: BorderRadius.circular(16),
                         child: Image.network(
                           boardData!['imageUrl'] ?? '',
-                          height: 280,
+                          height: 450,
                           width: double.infinity,
                           fit: BoxFit.cover,
                         ),
@@ -273,6 +355,114 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
                             });
                           }
                         },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final updates = <String>[];
+                          final orderId = widget.orderData['id'];
+                          final userId = widget.orderData['userId'];
+                          final adminUid =
+                              FirebaseAuth.instance.currentUser!.uid;
+                          final docRef = FirebaseFirestore.instance
+                              .collection('orders')
+                              .doc(orderId);
+
+                          // Charger les données actuelles depuis Firestore
+                          final currentData = await docRef.get().then(
+                            (doc) => doc.data() ?? {},
+                          );
+
+                          // Vérifier chaque champ
+                          if (nameController.text.trim() !=
+                              currentData['name']) {
+                            await updateField(
+                              'name',
+                              nameController.text.trim(),
+                            );
+                            updates.add('le nom');
+                          }
+                          if (addressController.text.trim() !=
+                              currentData['address']) {
+                            await updateField(
+                              'address',
+                              addressController.text.trim(),
+                            );
+                            updates.add('l’adresse');
+                          }
+                          if (priceController.text.trim() !=
+                              currentData['price'].toString()) {
+                            await updateField(
+                              'price',
+                              priceController.text.trim(),
+                            );
+                            updates.add('le prix');
+                          }
+
+                          // Si aucun changement détecté
+                          if (updates.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Aucune modification détectée.'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          // Envoyer message à l'utilisateur
+                          if (userId != null) {
+                            final chatId =
+                                userId.compareTo(adminUid) < 0
+                                    ? '${userId}_$adminUid'
+                                    : '${adminUid}_$userId';
+
+                            final messageText =
+                                updates.length == 1
+                                    ? '📝 ${updates.first} de votre commande a été modifié par Chewlin.'
+                                    : '📝 ${updates.join(', ')} de votre commande ont été modifiés par Chewlin.';
+
+                            await FirebaseFirestore.instance
+                                .collection('messages')
+                                .doc(chatId)
+                                .collection('messages')
+                                .add({
+                                  'senderId': adminUid,
+                                  'text': messageText,
+                                  'createdAt': Timestamp.now(),
+                                  'isRead': false,
+                                });
+
+                            await FirebaseFirestore.instance
+                                .collection('messages')
+                                .doc(chatId)
+                                .set({
+                                  'participants': [userId, adminUid],
+                                  'lastMessage': messageText,
+                                  'updatedAt': Timestamp.now(),
+                                }, SetOptions(merge: true));
+                          }
+
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Modifications enregistrées.'),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.green,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                        ),
+                        icon: const Icon(Icons.save, color: Colors.white),
+                        label: const Text(
+                          'Enregistrer les modifications',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),

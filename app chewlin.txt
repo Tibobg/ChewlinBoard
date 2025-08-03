@@ -10,7 +10,6 @@ Ajouter une page équipement (roue, grip) + calendrier sélection date
 page de chargement quand "retour" page message a enlever
 
 Mettre en place de la durabilité, si le serveur redémarre où à un problème, les données ne sont pas supprimés. Voir WAL à mettre en place
-COTE ADMIN DISCUSSION DISPARAIT SI L'UTILISATEUR ENVOI UNE IMAGE
 vérifier si jwt stocker dans cookie et pas en local
 système d'invalidation de jwt après un certain temps
 jamais de mdp dans jwt
@@ -19,3 +18,14 @@ app de test Wallaby AI+ (payant)
 git checkout main
 git merge dev
 git push origin main
+
+
+retour louis:
+différente pages de login, certaines ouvrent le clavier direct, d'autres non
+lag lors de la sortie du clavier dans la detail page dans création de projet
+lorsque image importé, bouton valider cliquable une seule fois car pour le moment, ouvre plusieurs page après quelques secondes
+lors de l'achat, loader plus gros que texte
+animation ouverture chat, mettre un fade plutot qu'une pop
+trouver d'ou vienne les lags
+lors d'un clic sur notif nouveau message, rediriger vers la chat page
+COTE ADMIN DISCUSSION DISPARAIT SI L'UTILISATEUR ENVOI UNE IMAGE

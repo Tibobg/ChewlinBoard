@@ -39,13 +39,13 @@ class _DriveGalleryState extends State<DriveGallery> {
 
     _scrollTimer = Timer.periodic(const Duration(milliseconds: 25), (_) {
       if (_scrollController.hasClients) {
-        final maxScroll = _scrollController.position.maxScrollExtent;
         final current = _scrollController.offset;
+        final maxScroll = _scrollController.position.maxScrollExtent;
 
-        if (current < maxScroll) {
-          _scrollController.jumpTo(current + scrollSpeed);
-        } else {
+        if (current >= maxScroll - 200) {
           _scrollController.jumpTo(0);
+        } else {
+          _scrollController.jumpTo(current + scrollSpeed);
         }
       }
     });
@@ -75,7 +75,6 @@ class _DriveGalleryState extends State<DriveGallery> {
       final data = json.decode(response.body);
       final files = data['files'] as List;
 
-      // Trie les fichiers par numéro décroissant (ex: 22.jpg à 1.jpg)
       files.sort((a, b) {
         final numA =
             int.tryParse(
@@ -237,13 +236,9 @@ class _DriveGalleryState extends State<DriveGallery> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (imageUrls.isEmpty) {
+    if (isLoading) return const Center(child: CircularProgressIndicator());
+    if (imageUrls.isEmpty)
       return const Center(child: Text("Aucune image trouvée."));
-    }
 
     return NotificationListener<UserScrollNotification>(
       onNotification: (notification) {
@@ -253,35 +248,37 @@ class _DriveGalleryState extends State<DriveGallery> {
       child: GestureDetector(
         onTap: stopAutoScroll,
         child: SizedBox(
-          height: 200,
+          height: 240,
           child: ListView.builder(
             controller: _scrollController,
             scrollDirection: Axis.horizontal,
-            itemCount: imageUrls.length,
             itemBuilder: (context, index) {
+              final realIndex = index % imageUrls.length;
+              final imageUrl = imageUrls[realIndex];
               return GestureDetector(
                 onTap: () {
                   stopAutoScroll();
-                  showFullScreenGallery(index);
+                  showFullScreenGallery(realIndex);
                 },
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     child: CachedNetworkImage(
-                      imageUrl: imageUrls[index],
+                      imageUrl: imageUrl,
                       width: 160,
+                      height: 240,
                       fit: BoxFit.cover,
                       placeholder:
                           (context, url) => Shimmer.fromColors(
                             baseColor: Colors.grey.shade800,
                             highlightColor: Colors.grey.shade600,
                             child: Container(
-                              width: 160,
-                              height: 200,
+                              width: 180,
+                              height: 240,
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade800,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                           ),

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../theme/colors.dart';
-import 'stripe_checkout_page.dart';
+import '../../theme/colors.dart';
+import '../checkout/stripe_checkout_page.dart';
 
 class OrderPage extends StatefulWidget {
   final Map<String, dynamic> skateboard;
@@ -34,9 +34,29 @@ class _OrderPageState extends State<OrderPage> {
   }
 
   Future<void> _createStripeSession() async {
+    final name = nameController.text.trim();
+    final firstName = firstNameController.text.trim();
     final email = emailController.text.trim();
     final phone = phoneController.text.trim();
+    final address = addressController.text.trim();
     final zip = zipController.text.trim();
+    final city = cityController.text.trim();
+
+    // Vérification des champs vides
+    if ([
+      name,
+      firstName,
+      email,
+      phone,
+      address,
+      zip,
+      city,
+    ].any((e) => e.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Veuillez remplir tous les champs.")),
+      );
+      return;
+    }
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("L'email n'est pas valide.")),

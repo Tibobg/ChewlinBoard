@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../theme/colors.dart';
-import '../widgets/drive_gallery.dart';
-import '../widgets/availability_calendar.dart';
-import '../widgets/app_header.dart';
+import '../../theme/colors.dart';
+import '../../widgets/drive_gallery.dart';
+import '../../widgets/availability_calendar.dart';
+import '../../widgets/app_header.dart';
+import '../user/user_order_details_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -57,11 +58,11 @@ class _HomePageState extends State<HomePage> {
   double getProgressFromStatus(String status) {
     switch (status) {
       case 'payée':
-        return 0.25;
+        return 0.10;
       case 'préparée':
-        return 0.5;
+        return 0.25;
       case 'expédiée':
-        return 0.75;
+        return 0.50;
       case 'livrée':
         return 1.0;
       default:
@@ -93,39 +94,49 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: const LinearGradient(
-              colors: [AppColors.green, AppColors.black],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => UserOrderDetailsPage(orderData: activeOrder!),
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: const LinearGradient(
+                colors: [AppColors.green, AppColors.black],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Planche : $title',
-                style: const TextStyle(color: AppColors.beige),
-              ),
-              Text(
-                'Statut : $status',
-                style: const TextStyle(color: AppColors.beige),
-              ),
-              Text(
-                'Commande du : $formattedDate',
-                style: const TextStyle(color: AppColors.beige),
-              ),
-              const SizedBox(height: 10),
-              LinearProgressIndicator(
-                value: getProgressFromStatus(status),
-                backgroundColor: Colors.white24,
-                color: AppColors.green,
-                minHeight: 8,
-              ),
-            ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Planche : $title',
+                  style: const TextStyle(color: AppColors.beige),
+                ),
+                Text(
+                  'Statut : $status',
+                  style: const TextStyle(color: AppColors.beige),
+                ),
+                Text(
+                  'Commande du : $formattedDate',
+                  style: const TextStyle(color: AppColors.beige),
+                ),
+                const SizedBox(height: 10),
+                LinearProgressIndicator(
+                  value: getProgressFromStatus(status),
+                  backgroundColor: Colors.white24,
+                  color: AppColors.green,
+                  minHeight: 8,
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -200,6 +211,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 8),
                   Container(
+                    clipBehavior: Clip.hardEdge,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       gradient: const LinearGradient(
@@ -208,7 +220,7 @@ class _HomePageState extends State<HomePage> {
                         end: Alignment.bottomRight,
                       ),
                     ),
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: const DriveGallery(),
                   ),
 

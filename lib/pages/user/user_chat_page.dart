@@ -20,7 +20,6 @@ class _UserChatPageState extends State<UserChatPage> {
   final String adminUid = 'wjGx853IYFTe2hrtNxrSvTKc23h1';
   String? _replyToMessage;
   String? _editingMessageId;
-  String? _editingOriginalText;
   late final String chatId;
   late final String currentUid;
 
@@ -72,7 +71,6 @@ class _UserChatPageState extends State<UserChatPage> {
           .update({'text': text, 'isEdited': true});
       setState(() {
         _editingMessageId = null;
-        _editingOriginalText = null;
         _controller.clear();
       });
     } else {
@@ -209,7 +207,6 @@ class _UserChatPageState extends State<UserChatPage> {
                   Navigator.pop(context);
                   setState(() {
                     _editingMessageId = messageId;
-                    _editingOriginalText = text;
                     _controller.text = text;
                   });
                 },

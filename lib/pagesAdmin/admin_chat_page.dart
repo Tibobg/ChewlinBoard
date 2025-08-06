@@ -22,7 +22,6 @@ class _AdminChatPageState extends State<AdminChatPage> {
   final ImagePicker _picker = ImagePicker();
   String? _replyToMessage;
   String? _editingMessageId;
-  String? _editingOriginalText;
 
   late final String chatId;
 
@@ -74,7 +73,6 @@ class _AdminChatPageState extends State<AdminChatPage> {
           .update({'text': text, 'isEdited': true});
       setState(() {
         _editingMessageId = null;
-        _editingOriginalText = null;
         _controller.clear();
       });
     } else {
@@ -146,7 +144,6 @@ class _AdminChatPageState extends State<AdminChatPage> {
                   Navigator.pop(context);
                   setState(() {
                     _editingMessageId = messageId;
-                    _editingOriginalText = text;
                     _controller.text = text;
                   });
                 },

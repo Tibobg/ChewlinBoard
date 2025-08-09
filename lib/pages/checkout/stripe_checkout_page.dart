@@ -10,6 +10,9 @@ class StripeCheckoutPage extends StatefulWidget {
   final String buyerPhone;
   final String buyerAddress;
   final double price;
+  final bool isProjectOrder;
+  final String? projectId;
+  final DateTime? deliveryDate;
 
   const StripeCheckoutPage({
     super.key,
@@ -20,6 +23,9 @@ class StripeCheckoutPage extends StatefulWidget {
     required this.buyerPhone,
     required this.buyerAddress,
     required this.price,
+    this.isProjectOrder = false,
+    this.projectId,
+    this.deliveryDate,
   });
 
   @override
@@ -50,6 +56,9 @@ class _StripeCheckoutPageState extends State<StripeCheckoutPage> {
                             buyerPhone: widget.buyerPhone,
                             buyerAddress: widget.buyerAddress,
                             price: widget.price,
+                            isProjectOrder: widget.isProjectOrder,
+                            projectId: widget.projectId,
+                            deliveryDate: widget.deliveryDate,
                           ),
                     ),
                   );

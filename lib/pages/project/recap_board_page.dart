@@ -6,41 +6,12 @@ import '../../theme/colors.dart';
 import '../../widgets/app_header.dart';
 import '../../models/project_data.dart';
 import 'editor_board_page.dart';
+import 'delivery_date_page.dart';
 
 class RecapPage extends StatelessWidget {
   final ProjectData project;
 
   const RecapPage({super.key, required this.project});
-
-  Future<void> _saveProjectToFirestore(BuildContext context) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Utilisateur non connecté.")),
-      );
-      return;
-    }
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('projects')
-          .add(project.toMap(user.uid));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Commande confirmée et enregistrée !")),
-      );
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => BottomNavContainer(initialIndex: 2)),
-        (route) => false,
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Erreur : $e")));
-    }
-  }
 
   Future<void> _saveAsDraft(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -259,7 +230,14 @@ class RecapPage extends StatelessWidget {
                         const SizedBox(width: 16),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => _saveProjectToFirestore(context),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => PaymentPage(project: project),
+                                ),
+                              );
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.green,
                               shape: RoundedRectangleBorder(
@@ -271,7 +249,7 @@ class RecapPage extends StatelessWidget {
                               ),
                             ),
                             child: const Text(
-                              'Confirmer',
+                              'Payer',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: AppColors.beige,

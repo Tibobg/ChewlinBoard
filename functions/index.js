@@ -148,3 +148,71 @@ exports.markSkateboardAsSold = functions.region('europe-west1').https.onRequest(
     res.status(500).json({ error: 'Erreur lors de la mise à jour du statut' });
   }
 });
+
+const { google } = require('googleapis');
+
+const config = functions.config();
+
+if (!config.google || !config.google.client_id || !config.google.client_secret || !config.google.refresh_token) {
+  console.error("❌ Configuration Google OAuth manquante.");
+  throw new Error("Google OAuth configuration manquante");
+}
+
+const oauth2Client = new google.auth.OAuth2(
+  config.google.client_id,
+  config.google.client_secret,
+  'https://developers.google.com/oauthplayground'
+);
+
+oauth2Client.setCredentials({
+  refresh_token: functions.config().google.refresh_token,
+});
+
+const express = require('express');
+const cors = require('cors');
+const app = express();
+app.use(cors({ origin: true }));
+app.use(express.json());
+
+exports.addAgendaEvent = functions
+  .region('europe-west1')
+  .https
+  .onRequest(async (req, res) => {
+    try {
+      const { startDate, username } = req.body;
+      if (!startDate || !username) {
+        return res.status(400).json({ error: 'startDate et username sont requis' });
+      }
+
+      const delivery = new Date(startDate);
+
+      const start = new Date(delivery);
+      start.setDate(start.getDate() - 21);
+
+      // ⚠️ Google Calendar: end.date est EXCLUSIVE.
+      // Pour bloquer jusqu’au jour de livraison inclus, on met end = delivery + 1 jour.
+      const end = new Date(delivery);
+      end.setDate(end.getDate() + 1);
+
+      // helper pour n’avoir que la partie YYYY-MM-DD
+      const ymd = d => d.toISOString().split('T')[0];
+
+      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+      await calendar.events.insert({
+        calendarId: 'chewlincorp@gmail.com',
+        requestBody: {
+          summary: `skateboard ${username}`,
+          start: { date: ymd(start), timeZone: 'Europe/Paris' },
+          end:   { date: ymd(end),   timeZone: 'Europe/Paris' },
+        },
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      console.error('❌ Erreur Agenda Google:', error);
+      return res.status(500).json({ error: 'Erreur interne Google Agenda' });
+    }
+  });
+
+

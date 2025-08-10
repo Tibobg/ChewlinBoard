@@ -12,6 +12,7 @@ class StripeCheckoutPage extends StatefulWidget {
   final double price;
   final bool isProjectOrder;
   final String? projectId;
+  final String? previewImageUrl;
   final DateTime? deliveryDate;
 
   const StripeCheckoutPage({
@@ -25,6 +26,7 @@ class StripeCheckoutPage extends StatefulWidget {
     required this.price,
     this.isProjectOrder = false,
     this.projectId,
+    this.previewImageUrl,
     this.deliveryDate,
   });
 
@@ -58,6 +60,7 @@ class _StripeCheckoutPageState extends State<StripeCheckoutPage> {
                             price: widget.price,
                             isProjectOrder: widget.isProjectOrder,
                             projectId: widget.projectId,
+                            previewImageUrl: widget.previewImageUrl,
                             deliveryDate: widget.deliveryDate,
                           ),
                     ),

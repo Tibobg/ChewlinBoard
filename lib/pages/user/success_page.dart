@@ -20,6 +20,9 @@ class SuccessPage extends StatefulWidget {
   final String? projectId;
   final DateTime? deliveryDate;
 
+  // 🔽 NOUVEAU : on peut recevoir l’image déjà affichée dans OrderPage
+  final String? previewImageUrl;
+
   const SuccessPage({
     super.key,
     required this.skateboardId,
@@ -31,6 +34,7 @@ class SuccessPage extends StatefulWidget {
     this.isProjectOrder = false,
     this.projectId,
     this.deliveryDate,
+    this.previewImageUrl, // 👈 nouveau
   });
 
   @override
@@ -42,6 +46,31 @@ class _SuccessPageState extends State<SuccessPage> {
   void initState() {
     super.initState();
     _handleAfterPayment();
+  }
+
+  String? _normalizeStorageUrl(String? raw) {
+    if (raw == null) return null;
+    final url = raw.trim();
+    if (url.isEmpty) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+    if (url.startsWith('gs://')) {
+      final without = url.substring(5);
+      final slash = without.indexOf('/');
+      if (slash == -1) return null;
+      final bucket = without.substring(0, slash);
+      final path = without.substring(slash + 1);
+      final enc = Uri.encodeComponent(path);
+      return 'https://firebasestorage.googleapis.com/v0/b/$bucket/o/$enc?alt=media';
+    }
+
+    // chemin simple "dir/file.jpg"
+    const defaultBucket = 'chewlinboard-7a16f.firebasestorage.app';
+    if (!url.contains('://') && url.contains('/')) {
+      final enc = Uri.encodeComponent(url);
+      return 'https://firebasestorage.googleapis.com/v0/b/$defaultBucket/o/$enc?alt=media';
+    }
+    return url;
   }
 
   Future<void> _handleAfterPayment() async {
@@ -68,11 +97,50 @@ class _SuccessPageState extends State<SuccessPage> {
 
   Future<void> _finalizeProjectOrder(String userId) async {
     try {
-      // 1) Marquer le projet comme “payé” + enregistrer la date de livraison
-      if (widget.projectId != null && widget.projectId!.isNotEmpty) {
+      // 1) ProjectId (simple : on prend ce qu'on a reçu)
+      String? effectiveProjectId =
+          (widget.projectId != null && widget.projectId!.isNotEmpty)
+              ? widget.projectId
+              : null;
+
+      // 2) Image du projet
+      //    priorité à previewImageUrl (passée depuis OrderPage/StripeCheckoutPage),
+      //    sinon fallback lecture du doc 'projects/{id}'
+      String? projectImageUrl = _normalizeStorageUrl(widget.previewImageUrl);
+
+      if (projectImageUrl == null && effectiveProjectId != null) {
+        try {
+          final projDoc =
+              await FirebaseFirestore.instance
+                  .collection('projects')
+                  .doc(effectiveProjectId)
+                  .get();
+
+          if (projDoc.exists) {
+            final p = projDoc.data() ?? {};
+            String? raw;
+            if (p['imagePaths'] is List &&
+                (p['imagePaths'] as List).isNotEmpty) {
+              raw = (p['imagePaths'] as List).first as String?;
+            } else if (p['finalImageUrl'] is String) {
+              raw = p['finalImageUrl'] as String?;
+            } else if (p['imageUrl'] is String) {
+              raw = p['imageUrl'] as String?;
+            } else if (p['coverUrl'] is String) {
+              raw = p['coverUrl'] as String?;
+            }
+            projectImageUrl = _normalizeStorageUrl(raw);
+          }
+        } catch (e) {
+          debugPrint('ℹ️ Lecture projet échouée (image ignorée) : $e');
+        }
+      }
+
+      // 3) Mettre à jour le projet (si id dispo)
+      if (effectiveProjectId != null) {
         await FirebaseFirestore.instance
             .collection('projects')
-            .doc(widget.projectId)
+            .doc(effectiveProjectId)
             .set({
               'userId': userId,
               'isPaid': true,
@@ -83,18 +151,35 @@ class _SuccessPageState extends State<SuccessPage> {
             }, SetOptions(merge: true));
       } else {
         debugPrint(
-          '⚠️ projectId manquant : impossible de mettre à jour le projet.',
+          '⚠️ Aucun projectId fourni — on crée quand même la commande.',
         );
       }
 
-      // 2) Ajouter l’évènement Google Agenda (21 jours AVANT la date choisie sont bloqués côté backend)
+      // 4) Créer l’order (toujours)
+      await FirebaseFirestore.instance.collection('orders').add({
+        'skateboardId': 'customProject',
+        'projectId': effectiveProjectId ?? '',
+        'projectImageUrl': projectImageUrl ?? '',
+        'name': widget.buyerName,
+        'email': widget.buyerEmail,
+        'phone': widget.buyerPhone,
+        'address': widget.buyerAddress,
+        'status': 'payée',
+        'price': widget.price,
+        'userId': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // 5) Agenda (non bloquant)
       if (widget.deliveryDate != null) {
-        await _addGoogleCalendarEvent(widget.deliveryDate!, widget.buyerName);
-      } else {
-        debugPrint('⚠️ deliveryDate manquante : pas d’ajout au Google Agenda.');
+        try {
+          await _addGoogleCalendarEvent(widget.deliveryDate!, widget.buyerName);
+        } catch (e) {
+          debugPrint('ℹ️ Échec ajout agenda (non bloquant) : $e');
+        }
       }
-    } catch (e) {
-      debugPrint('❌ Erreur finalizeProjectOrder: $e');
+    } catch (e, st) {
+      debugPrint('❌ finalizeProjectOrder: $e\n$st');
     }
   }
 

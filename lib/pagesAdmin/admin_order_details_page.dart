@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'admin_chat_page.dart';
 
 class AdminOrderDetailsPage extends StatefulWidget {
   final Map<String, dynamic> orderData;
@@ -36,6 +37,34 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
     fetchBoard();
     fetchLatestOrder();
     fetchUserPseudo();
+  }
+
+  Future<void> _goToChat() async {
+    final userId = widget.orderData['userId'];
+    if (userId == null) return;
+
+    final adminUid = FirebaseAuth.instance.currentUser!.uid;
+
+    // initialise/merge le doc parent du chat (optionnel mais sûr)
+    final chatId =
+        userId.compareTo(adminUid) < 0
+            ? '${userId}_$adminUid'
+            : '${adminUid}_$userId';
+    await FirebaseFirestore.instance.collection('messages').doc(chatId).set({
+      'participants': [userId, adminUid],
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) =>
+                AdminChatPage(userUid: userId, pseudo: userPseudo ?? 'Client'),
+      ),
+    );
   }
 
   Future<void> fetchUserPseudo() async {
@@ -127,19 +156,17 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
         return;
     }
 
-    // Enregistre le message dans la sous-collection
     await FirebaseFirestore.instance
         .collection('messages')
         .doc(chatId)
         .collection('messages')
         .add({
-          'senderId': 'adminUid',
+          'senderId': adminUid,
           'text': messageText,
-          'createdAt': Timestamp.now(), // <-- clé attendue
+          'createdAt': Timestamp.now(),
           'isRead': false,
         });
 
-    // Met à jour le chat principal
     await FirebaseFirestore.instance.collection('messages').doc(chatId).set({
       'participants': [userId, adminUid],
       'lastMessage': messageText,
@@ -186,7 +213,6 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
         userId.compareTo(adminUid) < 0
             ? '${userId}_$adminUid'
             : '${adminUid}_$userId';
-
     final messageText = '❌ Votre commande a été annulée par Chewlin.';
 
     await FirebaseFirestore.instance
@@ -194,7 +220,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
         .doc(chatId)
         .collection('messages')
         .add({
-          'senderId': 'adminUid',
+          'senderId': adminUid,
           'text': messageText,
           'createdAt': Timestamp.now(),
           'isRead': false,
@@ -217,19 +243,16 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
       child: TextField(
         controller: controller,
         style: const TextStyle(color: AppColors.beige),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: AppColors.beige),
-          enabledBorder: const OutlineInputBorder(
+        decoration: const InputDecoration(
+          labelStyle: TextStyle(color: AppColors.beige),
+          enabledBorder: OutlineInputBorder(
             borderSide: BorderSide(color: AppColors.green),
           ),
-          focusedBorder: const OutlineInputBorder(
+          focusedBorder: OutlineInputBorder(
             borderSide: BorderSide(color: AppColors.green, width: 2),
           ),
-        ),
-        onSubmitted: (value) {
-          updateField(field, value);
-        },
+        ).copyWith(labelText: label),
+        onSubmitted: (value) => updateField(field, value),
       ),
     );
   }
@@ -268,6 +291,11 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Ouvrir la discussion',
+            icon: const Icon(Icons.message, color: AppColors.beige),
+            onPressed: _goToChat,
+          ),
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.beige),
             onPressed: () => Navigator.pop(context),
@@ -350,9 +378,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
                           if (newValue != null) {
                             await updateField('status', newValue);
                             await sendStatusMessage(newValue);
-                            setState(() {
-                              selectedStatus = newValue;
-                            });
+                            setState(() => selectedStatus = newValue);
                           }
                         },
                       ),
@@ -370,12 +396,10 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
                               .collection('orders')
                               .doc(orderId);
 
-                          // Charger les données actuelles depuis Firestore
                           final currentData = await docRef.get().then(
                             (doc) => doc.data() ?? {},
                           );
 
-                          // Vérifier chaque champ
                           if (nameController.text.trim() !=
                               currentData['name']) {
                             await updateField(
@@ -401,7 +425,6 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
                             updates.add('le prix');
                           }
 
-                          // Si aucun changement détecté
                           if (updates.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -411,13 +434,11 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
                             return;
                           }
 
-                          // Envoyer message à l'utilisateur
                           if (userId != null) {
                             final chatId =
                                 userId.compareTo(adminUid) < 0
                                     ? '${userId}_$adminUid'
                                     : '${adminUid}_$userId';
-
                             final messageText =
                                 updates.length == 1
                                     ? '📝 ${updates.first} de votre commande a été modifié par Chewlin.'

@@ -30,35 +30,143 @@ class AdminOrdersPage extends StatefulWidget {
 }
 
 class _AdminOrdersPageState extends State<AdminOrdersPage> {
+  String? _normalizeStorageUrl(String? raw) {
+    if (raw == null) return null;
+    final url = raw.trim();
+    if (url.isEmpty) return null;
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+
+    if (url.startsWith('gs://')) {
+      final withoutScheme = url.substring(5);
+      final firstSlash = withoutScheme.indexOf('/');
+      if (firstSlash == -1) return null;
+      final bucket = withoutScheme.substring(0, firstSlash);
+      final path = withoutScheme.substring(firstSlash + 1);
+      final encodedPath = Uri.encodeComponent(path);
+      return 'https://firebasestorage.googleapis.com/v0/b/$bucket/o/$encodedPath?alt=media';
+    }
+
+    const defaultBucket = 'chewlinboard-7a16f.firebasestorage.app';
+    if (!url.contains('://') && url.contains('/')) {
+      final encodedPath = Uri.encodeComponent(url);
+      return 'https://firebasestorage.googleapis.com/v0/b/$defaultBucket/o/$encodedPath?alt=media';
+    }
+
+    return url;
+  }
+
+  Future<String?> _resolveOrderImageUrl(Map<String, dynamic> data) async {
+    // 1) Priorité au champ ajouté dans SuccessPage pour projets custom
+    final projectImage = data['projectImageUrl'];
+    final normalizedProjectImage = _normalizeStorageUrl(
+      projectImage as String?,
+    );
+    if (normalizedProjectImage != null) return normalizedProjectImage;
+
+    // 2) Champs standards dans la commande
+    final direct =
+        data['imageUrl'] ??
+        data['customImageUrl'] ??
+        data['finalImageUrl'] ??
+        data['coverUrl'];
+    final normalizedDirect = _normalizeStorageUrl(direct as String?);
+    if (normalizedDirect != null) return normalizedDirect;
+
+    // 2.5) Fallback spécial "customProject" via projectId -> projects/{projectId}
+    if (data['skateboardId'] == 'customProject' &&
+        data['projectId'] is String &&
+        (data['projectId'] as String).isNotEmpty) {
+      final projDoc =
+          await FirebaseFirestore.instance
+              .collection('projects')
+              .doc(data['projectId'] as String)
+              .get();
+
+      if (projDoc.exists) {
+        final p = projDoc.data() ?? {};
+        String? raw;
+
+        // ton schéma actuel : imagePaths est un tableau, on prend le premier élément
+        if (p['imagePaths'] is List && (p['imagePaths'] as List).isNotEmpty) {
+          raw = (p['imagePaths'] as List).first as String?;
+        } else if (p['finalImageUrl'] is String) {
+          raw = p['finalImageUrl'] as String?;
+        } else if (p['imageUrl'] is String) {
+          raw = p['imageUrl'] as String?;
+        } else if (p['coverUrl'] is String) {
+          raw = p['coverUrl'] as String?;
+        } else if (p['images'] is List && (p['images'] as List).isNotEmpty) {
+          raw = (p['images'] as List).first as String?;
+        }
+
+        final normalized = _normalizeStorageUrl(raw);
+        if (normalized != null) return normalized;
+      }
+    }
+
+    // 3) Sinon, via le skateboard lié
+    final skateboardId = data['skateboardId'];
+    if (skateboardId != null &&
+        skateboardId is String &&
+        skateboardId.isNotEmpty) {
+      final boardDoc =
+          await FirebaseFirestore.instance
+              .collection('skateboards')
+              .doc(skateboardId)
+              .get();
+      if (boardDoc.exists) {
+        final b = boardDoc.data() ?? {};
+        final fromBoard = b['imageUrl'] ?? b['coverUrl'];
+        final normalizedBoard = _normalizeStorageUrl(fromBoard as String?);
+        if (normalizedBoard != null) return normalizedBoard;
+
+        final images = b['images'];
+        if (images is List && images.isNotEmpty && images.first is String) {
+          return _normalizeStorageUrl(images.first as String);
+        }
+      }
+    }
+
+    return null;
+  }
+
   Future<List<AdminOrder>> fetchOrders() async {
-    final snapshot =
+    final snap =
         await FirebaseFirestore.instance
             .collection('orders')
             .orderBy('timestamp', descending: true)
             .get();
-    final futures = snapshot.docs.map((doc) async {
+
+    final futures = snap.docs.map((doc) async {
       final data = doc.data();
-      final skateboardId = data['skateboardId'];
-      String? imageUrl;
-      if (skateboardId != null) {
-        final boardDoc =
-            await FirebaseFirestore.instance
-                .collection('skateboards')
-                .doc(skateboardId)
-                .get();
-        imageUrl = boardDoc.data()?['imageUrl'];
+
+      DateTime ts;
+      final rawTs = data['timestamp'];
+      if (rawTs is Timestamp) {
+        ts = rawTs.toDate();
+      } else if (rawTs is DateTime) {
+        ts = rawTs;
+      } else {
+        ts = DateTime.now();
       }
+
+      final resolvedUrl = await _resolveOrderImageUrl(data);
+
       return AdminOrder(
         id: doc.id,
-        name: data['name'] ?? 'Inconnu',
-        address: data['address'] ?? 'Adresse inconnue',
-        status: data['status'] ?? 'payée',
-        price: (data['price'] ?? 0).toDouble(),
-        imageUrl: imageUrl,
-        timestamp: (data['timestamp'] as Timestamp).toDate(),
+        name: (data['name'] ?? 'Inconnu') as String,
+        address: (data['address'] ?? 'Adresse inconnue') as String,
+        status: (data['status'] ?? 'payée') as String,
+        price: (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
+        imageUrl: resolvedUrl,
+        timestamp: ts,
       );
     });
-    return await Future.wait(futures);
+
+    return Future.wait(futures);
   }
 
   @override
@@ -89,13 +197,12 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
           if (snapshot.hasError) {
             return const Center(child: Text('Erreur de chargement'));
           }
-          final orders = snapshot.data!;
-          final filteredOrders = orders;
+          final orders = snapshot.data ?? const <AdminOrder>[];
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               const SizedBox(height: 16),
-              ...filteredOrders.map((order) {
+              ...orders.map((order) {
                 final formattedDate = DateFormat(
                   'dd/MM/yyyy à HH:mm',
                 ).format(order.timestamp);
@@ -106,11 +213,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                             .collection('orders')
                             .doc(order.id)
                             .get();
-
                     if (!orderDoc.exists) return;
-
-                    final data = orderDoc.data()!;
-                    data['id'] = order.id;
+                    final data = orderDoc.data()!..['id'] = order.id;
 
                     Navigator.push(
                       context,
@@ -134,22 +238,30 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child:
-                              order.imageUrl != null
-                                  ? Image.network(
-                                    order.imageUrl!,
-                                    width: 60,
-                                    height: 60,
-                                    fit: BoxFit.cover,
-                                  )
-                                  : Container(
-                                    width: 60,
-                                    height: 60,
-                                    color: Colors.grey.shade300,
-                                    child: const Icon(
-                                      Icons.image_not_supported,
+                          child: SizedBox(
+                            width: 60,
+                            height: 60,
+                            child:
+                                (order.imageUrl != null &&
+                                        order.imageUrl!.trim().isNotEmpty)
+                                    ? Image.network(
+                                      order.imageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (_, __, ___) => Container(
+                                            color: Colors.grey.shade300,
+                                            child: const Icon(
+                                              Icons.broken_image,
+                                            ),
+                                          ),
+                                    )
+                                    : Container(
+                                      color: Colors.grey.shade300,
+                                      child: const Icon(
+                                        Icons.image_not_supported,
+                                      ),
                                     ),
-                                  ),
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -196,7 +308,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
             ],
           );
         },

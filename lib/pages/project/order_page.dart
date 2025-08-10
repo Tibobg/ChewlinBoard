@@ -41,6 +41,16 @@ class _OrderPageState extends State<OrderPage> {
     final address = addressController.text.trim();
     final zip = zipController.text.trim();
     final city = cityController.text.trim();
+    // Détection projet perso
+    final bool isProjectOrder =
+        widget.skateboard['isProjectOrder'] == true ||
+        widget.skateboard['id'] == 'customProject';
+
+    // Project ID (si dispo)
+    final String? projectId = widget.skateboard['projectId'] as String?;
+
+    // Image affichée dans OrderPage
+    final String? previewImageUrl = widget.skateboard['imageUrl'] as String?;
 
     // Vérification des champs vides
     if ([
@@ -126,6 +136,9 @@ class _OrderPageState extends State<OrderPage> {
                       .replaceAll('€', '')
                       .trim(),
                 ),
+                isProjectOrder: isProjectOrder,
+                projectId: projectId,
+                previewImageUrl: previewImageUrl,
               ),
         ),
       );

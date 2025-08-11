@@ -1,0 +1,47 @@
+// GENERATED — do not edit.
+// ignore_for_file: unused_import
+import 'package:chewlin_board/core/firebase_refs.dart';
+import 'package:chewlin_board/data/project_repository.dart';
+import 'package:chewlin_board/main.dart';
+import 'package:chewlin_board/models/project_data.dart';
+import 'package:chewlin_board/navigation/admin_nav_container.dart';
+import 'package:chewlin_board/navigation/bottom_nav_container.dart';
+import 'package:chewlin_board/pages/auth/auth_gate.dart';
+import 'package:chewlin_board/pages/auth/forgot_password_page.dart';
+import 'package:chewlin_board/pages/auth/login_page.dart';
+import 'package:chewlin_board/pages/auth/signup_page.dart';
+import 'package:chewlin_board/pages/checkout/stripe_checkout_page.dart';
+import 'package:chewlin_board/pages/project/customize_board_page.dart';
+import 'package:chewlin_board/pages/project/delivery_date_page.dart';
+import 'package:chewlin_board/pages/project/editor_board_page.dart';
+import 'package:chewlin_board/pages/project/order_page.dart';
+import 'package:chewlin_board/pages/project/project_order_page.dart';
+import 'package:chewlin_board/pages/project/project_page.dart';
+import 'package:chewlin_board/pages/project/recap_board_page.dart';
+import 'package:chewlin_board/pages/project/select_board_page.dart';
+import 'package:chewlin_board/pages/user/full_gallery_page.dart';
+import 'package:chewlin_board/pages/user/home_page.dart';
+import 'package:chewlin_board/pages/user/message_page.dart';
+import 'package:chewlin_board/pages/user/profile_page.dart';
+import 'package:chewlin_board/pages/user/splash_screen.dart';
+import 'package:chewlin_board/pages/user/success_page.dart';
+import 'package:chewlin_board/pages/user/terms_of_use_page.dart';
+import 'package:chewlin_board/pages/user/user_chat_page.dart';
+import 'package:chewlin_board/pages/user/user_order_details_page.dart';
+import 'package:chewlin_board/pagesAdmin/admin_chat_page.dart';
+import 'package:chewlin_board/pagesAdmin/admin_home_page.dart';
+import 'package:chewlin_board/pagesAdmin/admin_inventory_page.dart';
+import 'package:chewlin_board/pagesAdmin/admin_message_page.dart';
+import 'package:chewlin_board/pagesAdmin/admin_order_details_page.dart';
+import 'package:chewlin_board/pagesAdmin/admin_orders_page.dart';
+import 'package:chewlin_board/pagesAdmin/admin_project_page.dart';
+import 'package:chewlin_board/pagesAdmin/admin_stats_page.dart';
+import 'package:chewlin_board/repositories/user_repository.dart';
+import 'package:chewlin_board/services/auth_service.dart';
+import 'package:chewlin_board/services/order_service.dart';
+import 'package:chewlin_board/theme/app_theme.dart';
+import 'package:chewlin_board/theme/colors.dart';
+import 'package:chewlin_board/widgets/app_header.dart';
+import 'package:chewlin_board/widgets/availability_calendar.dart';
+import 'package:chewlin_board/widgets/drive_gallery.dart';
+void main() {}

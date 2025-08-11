@@ -3,7 +3,7 @@ import '../../theme/colors.dart';
 import 'login_page.dart';
 import '../../services/auth_service.dart';
 import 'signup_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -14,7 +14,7 @@ class ForgotPasswordPage extends StatefulWidget {
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final TextEditingController _emailController = TextEditingController();
-  final AuthService _authService = AuthService();
+  final AuthService _authService = authService;
   bool _isLoading = false;
 
   Future<void> _sendResetEmail() async {
@@ -43,9 +43,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     setState(() => _isLoading = true);
 
     try {
-      final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(
-        email,
-      );
+      final methods = await firebaseAuth.fetchSignInMethodsForEmail(email);
 
       if (methods.isEmpty) {
         if (!mounted) return;

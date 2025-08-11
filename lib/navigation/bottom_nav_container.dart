@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:async/async.dart';
 import '../pages/user/home_page.dart';
 import '../pages/user/full_gallery_page.dart';
@@ -10,6 +8,7 @@ import '../pages/user/message_page.dart';
 import '../pages/user/profile_page.dart';
 import '../theme/colors.dart';
 import 'package:another_flushbar/flushbar.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class BottomNavContainer extends StatefulWidget {
   final int initialIndex;
@@ -42,13 +41,13 @@ class _BottomNavContainerState extends State<BottomNavContainer> {
   }
 
   void _listenToUnreadMessages() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = firebaseAuth.currentUser;
     if (currentUser == null) return;
 
     final userId = currentUser.uid;
 
     final convs =
-        await FirebaseFirestore.instance
+        await firestore
             .collection('messages')
             .where('participants', arrayContains: userId)
             .get();
@@ -57,7 +56,7 @@ class _BottomNavContainerState extends State<BottomNavContainer> {
 
     final streams = convs.docs.map((conv) {
       final convId = conv.id;
-      return FirebaseFirestore.instance
+      return firestore
           .collection('messages')
           .doc(convId)
           .collection('messages')

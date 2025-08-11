@@ -5,8 +5,7 @@ import 'forgot_password_page.dart';
 import '../../services/auth_service.dart';
 import 'auth_gate.dart';
 import '../user/terms_of_use_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,7 +17,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
+  final AuthService _auth = authService;
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -35,19 +34,15 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
 
-    final user = await _authService.signIn(email, password);
+    final user = await _auth.signIn(email, password);
 
     if (!mounted) return;
 
     if (user != null) {
-      final userDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get();
+      final userDoc = await firestore.collection('users').doc(user.uid).get();
 
       if (!userDoc.exists || userDoc.data()?['pseudo'] == null) {
-        await FirebaseAuth.instance.signOut(); // Déconnexion
+        await firebaseAuth.signOut(); // Déconnexion
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -74,7 +69,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    FirebaseAuth.instance.signOut();
+    firebaseAuth.signOut();
   }
 
   @override

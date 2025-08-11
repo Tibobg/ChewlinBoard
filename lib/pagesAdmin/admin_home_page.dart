@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../../theme/colors.dart';
 import 'admin_chat_page.dart';
 import 'admin_order_details_page.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -25,9 +24,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
   }
 
   Future<void> fetchUpdates() async {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
-    final messagesSnapshot =
-        await FirebaseFirestore.instance.collection('messages').get();
+    final currentUid = firebaseAuth.currentUser?.uid;
+    final messagesSnapshot = await firestore.collection('messages').get();
 
     List<Map<String, dynamic>> unseen = [];
 
@@ -40,7 +38,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
       final otherUid = participants.firstWhere((uid) => uid != currentUid);
 
       final unreadSnap =
-          await FirebaseFirestore.instance
+          await firestore
               .collection('messages')
               .doc(chatId)
               .collection('messages')
@@ -50,18 +48,14 @@ class _AdminHomePageState extends State<AdminHomePage> {
               .get();
 
       if (unreadSnap.docs.isNotEmpty) {
-        final userDoc =
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(otherUid)
-                .get();
+        final userDoc = await firestore.collection('users').doc(otherUid).get();
         final pseudo = userDoc['pseudo'] ?? 'Utilisateur';
         unseen.add({'pseudo': pseudo, 'chatId': chatId, 'userUid': otherUid});
       }
     }
 
     final ordersSnap =
-        await FirebaseFirestore.instance
+        await firestore
             .collection('orders')
             .orderBy('timestamp', descending: true)
             .limit(5)

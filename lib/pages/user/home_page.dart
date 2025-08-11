@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/colors.dart';
 import '../../widgets/drive_gallery.dart';
 import '../../widgets/availability_calendar.dart';
 import '../../widgets/app_header.dart';
 import '../user/user_order_details_page.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,14 +16,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   Future<String?> _getPseudo() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = firebaseAuth.currentUser;
     if (user == null) return null;
 
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
+    final doc = await firestore.collection('users').doc(user.uid).get();
     return doc.data()?['pseudo'];
   }
 
@@ -36,11 +32,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> fetchActiveOrder() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = firebaseAuth.currentUser?.uid;
     if (uid == null) return;
 
     final snapshot =
-        await FirebaseFirestore.instance
+        await firestore
             .collection('orders')
             .where('userId', isEqualTo: uid)
             .where('status', whereIn: ['payée', 'préparée', 'expédiée'])

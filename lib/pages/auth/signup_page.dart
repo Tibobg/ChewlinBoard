@@ -3,6 +3,7 @@ import '../../services/auth_service.dart';
 import '../../theme/colors.dart';
 import '../../navigation/bottom_nav_container.dart';
 import '../user/terms_of_use_page.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -17,7 +18,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController passwordController = TextEditingController();
   bool _obscurePassword = true;
 
-  final AuthService _authService = AuthService();
+  final AuthService _authService = authService;
 
   bool _isLoading = false;
 

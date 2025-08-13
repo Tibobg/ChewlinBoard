@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/colors.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import 'admin_chat_page.dart';
 
 class AdminOrderDetailsPage extends StatefulWidget {
@@ -43,14 +43,14 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
     final userId = widget.orderData['userId'];
     if (userId == null) return;
 
-    final adminUid = FirebaseAuth.instance.currentUser!.uid;
+    final adminUid = firebaseAuth.currentUser!.uid;
 
     // initialise/merge le doc parent du chat (optionnel mais sûr)
     final chatId =
         userId.compareTo(adminUid) < 0
             ? '${userId}_$adminUid'
             : '${adminUid}_$userId';
-    await FirebaseFirestore.instance.collection('messages').doc(chatId).set({
+    await firestore.collection('messages').doc(chatId).set({
       'participants': [userId, adminUid],
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -70,11 +70,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
   Future<void> fetchUserPseudo() async {
     final userId = widget.orderData['userId'];
     if (userId != null) {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userId)
-              .get();
+      final doc = await firestore.collection('users').doc(userId).get();
       if (doc.exists) {
         setState(() {
           userPseudo = doc.data()?['pseudo'] ?? 'Utilisateur inconnu';
@@ -86,11 +82,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
   Future<void> fetchBoard() async {
     final boardId = widget.orderData['skateboardId'];
     if (boardId != null) {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('skateboards')
-              .doc(boardId)
-              .get();
+      final doc = await firestore.collection('skateboards').doc(boardId).get();
       if (doc.exists) {
         setState(() {
           boardData = doc.data();
@@ -104,11 +96,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
 
   Future<void> fetchLatestOrder() async {
     final orderId = widget.orderData['id'];
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('orders')
-            .doc(orderId)
-            .get();
+    final doc = await firestore.collection('orders').doc(orderId).get();
     if (doc.exists) {
       final data = doc.data()!;
       setState(() {
@@ -121,17 +109,16 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
   }
 
   Future<void> updateField(String field, dynamic value) async {
-    await FirebaseFirestore.instance
-        .collection('orders')
-        .doc(widget.orderData['id'])
-        .update({field: value});
+    await firestore.collection('orders').doc(widget.orderData['id']).update({
+      field: value,
+    });
   }
 
   Future<void> sendStatusMessage(String status) async {
     final userId = widget.orderData['userId'];
     if (userId == null) return;
 
-    final adminUid = FirebaseAuth.instance.currentUser!.uid;
+    final adminUid = firebaseAuth.currentUser!.uid;
     final chatId =
         userId.compareTo(adminUid) < 0
             ? '${userId}_$adminUid'
@@ -156,7 +143,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
         return;
     }
 
-    await FirebaseFirestore.instance
+    await firestore
         .collection('messages')
         .doc(chatId)
         .collection('messages')
@@ -167,7 +154,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
           'isRead': false,
         });
 
-    await FirebaseFirestore.instance.collection('messages').doc(chatId).set({
+    await firestore.collection('messages').doc(chatId).set({
       'participants': [userId, adminUid],
       'lastMessage': messageText,
       'updatedAt': Timestamp.now(),
@@ -179,15 +166,11 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
     final orderId = widget.orderData['id'];
 
     try {
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .doc(orderId)
-          .delete();
+      await firestore.collection('orders').doc(orderId).delete();
       if (boardId != null) {
-        await FirebaseFirestore.instance
-            .collection('skateboards')
-            .doc(boardId)
-            .update({'isSold': false});
+        await firestore.collection('skateboards').doc(boardId).update({
+          'isSold': false,
+        });
       }
       await sendCancelMessage();
       if (mounted) {
@@ -206,7 +189,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
   }
 
   Future<void> sendCancelMessage() async {
-    final adminUid = FirebaseAuth.instance.currentUser!.uid;
+    final adminUid = firebaseAuth.currentUser!.uid;
     final userId = widget.orderData['userId'];
 
     final chatId =
@@ -215,7 +198,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
             : '${adminUid}_$userId';
     final messageText = '❌ Votre commande a été annulée par Chewlin.';
 
-    await FirebaseFirestore.instance
+    await firestore
         .collection('messages')
         .doc(chatId)
         .collection('messages')
@@ -226,7 +209,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
           'isRead': false,
         });
 
-    await FirebaseFirestore.instance.collection('messages').doc(chatId).set({
+    await firestore.collection('messages').doc(chatId).set({
       'participants': [userId, adminUid],
       'lastMessage': messageText,
       'updatedAt': Timestamp.now(),
@@ -390,8 +373,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
                           final updates = <String>[];
                           final orderId = widget.orderData['id'];
                           final userId = widget.orderData['userId'];
-                          final adminUid =
-                              FirebaseAuth.instance.currentUser!.uid;
+                          final adminUid = firebaseAuth.currentUser!.uid;
                           final docRef = FirebaseFirestore.instance
                               .collection('orders')
                               .doc(orderId);
@@ -444,7 +426,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
                                     ? '📝 ${updates.first} de votre commande a été modifié par Chewlin.'
                                     : '📝 ${updates.join(', ')} de votre commande ont été modifiés par Chewlin.';
 
-                            await FirebaseFirestore.instance
+                            await firestore
                                 .collection('messages')
                                 .doc(chatId)
                                 .collection('messages')
@@ -455,7 +437,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
                                   'isRead': false,
                                 });
 
-                            await FirebaseFirestore.instance
+                            await firestore
                                 .collection('messages')
                                 .doc(chatId)
                                 .set({

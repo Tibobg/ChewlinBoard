@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import 'package:flutter/material.dart';
 import '../pages/auth/login_page.dart'; // ajuste le chemin si nécessaire
 
@@ -6,7 +6,7 @@ class AdminProjectPage extends StatelessWidget {
   const AdminProjectPage({super.key});
 
   void _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
+    await firebaseAuth.signOut();
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginPage()),

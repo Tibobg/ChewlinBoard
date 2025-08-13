@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -28,14 +28,14 @@ class _AdminChatPageState extends State<AdminChatPage> {
   @override
   void initState() {
     super.initState();
-    final currentUid = FirebaseAuth.instance.currentUser!.uid;
+    final currentUid = firebaseAuth.currentUser!.uid;
 
     chatId =
         widget.userUid.compareTo(currentUid) < 0
             ? '${widget.userUid}_$currentUid'
             : '${currentUid}_${widget.userUid}';
 
-    FirebaseFirestore.instance.collection('users').doc(currentUid).set({
+    firestore.collection('users').doc(currentUid).set({
       'lastSeen': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
@@ -44,7 +44,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
 
   Future<void> _markMessagesAsRead(String conversationId, String userId) async {
     final query =
-        await FirebaseFirestore.instance
+        await firestore
             .collection('messages')
             .doc(conversationId)
             .collection('messages')
@@ -65,7 +65,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
     if (text.isEmpty) return;
 
     if (_editingMessageId != null) {
-      await FirebaseFirestore.instance
+      await firestore
           .collection('messages')
           .doc(chatId)
           .collection('messages')
@@ -85,7 +85,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
   }
 
   Future<void> _deleteMessage(String messageId) async {
-    final docRef = FirebaseFirestore.instance
+    final docRef = firestore
         .collection('messages')
         .doc(chatId)
         .collection('messages')
@@ -184,9 +184,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
           'replyTo': _replyToMessage,
         };
 
-        final docRef = FirebaseFirestore.instance
-            .collection('messages')
-            .doc(chatId);
+        final docRef = firestore.collection('messages').doc(chatId);
         await docRef.collection('messages').add(messageData);
 
         await docRef.set({
@@ -217,9 +215,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
       'replyTo': _replyToMessage,
     };
 
-    final docRef = FirebaseFirestore.instance
-        .collection('messages')
-        .doc(chatId);
+    final docRef = firestore.collection('messages').doc(chatId);
     await docRef.collection('messages').add(messageData);
 
     await docRef.set({
@@ -228,7 +224,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
-    await FirebaseFirestore.instance.collection('users').doc(senderId).update({
+    await firestore.collection('users').doc(senderId).update({
       'lastSeen': FieldValue.serverTimestamp(),
     });
   }
@@ -243,9 +239,9 @@ class _AdminChatPageState extends State<AdminChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser!.uid;
+    final currentUid = firebaseAuth.currentUser!.uid;
 
-    final messagesRef = FirebaseFirestore.instance
+    final messagesRef = firestore
         .collection('messages')
         .doc(chatId)
         .collection('messages')

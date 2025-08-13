@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../navigation/bottom_nav_container.dart';
 import '../../theme/colors.dart';
@@ -14,7 +14,7 @@ class RecapPage extends StatelessWidget {
   const RecapPage({super.key, required this.project});
 
   Future<void> _saveAsDraft(BuildContext context) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = firebaseAuth.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Utilisateur non connecté.")),
@@ -29,14 +29,12 @@ class RecapPage extends StatelessWidget {
             ..['lastStep'] = 'recap';
 
       if (project.projectId != null) {
-        await FirebaseFirestore.instance
+        await firestore
             .collection('projects')
             .doc(project.projectId)
             .set(data, SetOptions(merge: true));
       } else {
-        final docRef = await FirebaseFirestore.instance
-            .collection('projects')
-            .add(data);
+        final docRef = await firestore.collection('projects').add(data);
         project.projectId = docRef.id;
       }
 

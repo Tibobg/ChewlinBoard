@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chewlin_board/services/auth_service.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 // Lazy & overridable (évite d'appeler .instance au chargement)
 
@@ -16,3 +17,5 @@ AuthService? _authService;
 AuthService get authService =>
     _authService ??= AuthService(auth: firebaseAuth, firestore: firestore);
 set authService(AuthService value) => _authService = value;
+
+FirebaseStorage storage = FirebaseStorage.instance;

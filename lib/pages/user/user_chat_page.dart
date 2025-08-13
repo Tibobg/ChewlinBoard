@@ -4,7 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/colors.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import '../../navigation/bottom_nav_container.dart';
 
 class UserChatPage extends StatefulWidget {
@@ -26,14 +26,14 @@ class _UserChatPageState extends State<UserChatPage> {
   @override
   void initState() {
     super.initState();
-    currentUid = FirebaseAuth.instance.currentUser!.uid;
+    currentUid = firebaseAuth.currentUser!.uid;
 
     chatId =
         currentUid.compareTo(adminUid) < 0
             ? '${currentUid}_$adminUid'
             : '${adminUid}_$currentUid';
 
-    FirebaseFirestore.instance.collection('users').doc(currentUid).set({
+    firestore.collection('users').doc(currentUid).set({
       'lastSeen': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
@@ -42,7 +42,7 @@ class _UserChatPageState extends State<UserChatPage> {
 
   Future<void> _markMessagesAsRead(String conversationId, String userId) async {
     final unreadQuery =
-        await FirebaseFirestore.instance
+        await firestore
             .collection('messages')
             .doc(conversationId)
             .collection('messages')
@@ -63,7 +63,7 @@ class _UserChatPageState extends State<UserChatPage> {
     if (text.isEmpty) return;
 
     if (_editingMessageId != null) {
-      await FirebaseFirestore.instance
+      await firestore
           .collection('messages')
           .doc(chatId)
           .collection('messages')
@@ -95,7 +95,7 @@ class _UserChatPageState extends State<UserChatPage> {
       if (uploadTask.state == TaskState.success) {
         final imageUrl = await ref.getDownloadURL();
 
-        final senderId = FirebaseAuth.instance.currentUser!.uid;
+        final senderId = firebaseAuth.currentUser!.uid;
 
         final messageData = {
           'senderId': senderId,
@@ -106,9 +106,7 @@ class _UserChatPageState extends State<UserChatPage> {
           'replyTo': _replyToMessage,
         };
 
-        final docRef = FirebaseFirestore.instance
-            .collection('messages')
-            .doc(chatId);
+        final docRef = firestore.collection('messages').doc(chatId);
         await docRef.collection('messages').add(messageData);
 
         await docRef.set({
@@ -125,7 +123,7 @@ class _UserChatPageState extends State<UserChatPage> {
   }
 
   Future<void> _sendMessage({String? text, String? imageUrl}) async {
-    final senderId = FirebaseAuth.instance.currentUser!.uid;
+    final senderId = firebaseAuth.currentUser!.uid;
     final messageData = {
       'senderId': senderId,
       'text': text ?? '',
@@ -135,9 +133,7 @@ class _UserChatPageState extends State<UserChatPage> {
       'replyTo': _replyToMessage,
     };
 
-    final docRef = FirebaseFirestore.instance
-        .collection('messages')
-        .doc(chatId);
+    final docRef = firestore.collection('messages').doc(chatId);
     await docRef.collection('messages').add(messageData);
 
     await docRef.set({
@@ -148,7 +144,7 @@ class _UserChatPageState extends State<UserChatPage> {
   }
 
   Future<void> _deleteMessage(String messageId) async {
-    final docRef = FirebaseFirestore.instance
+    final docRef = firestore
         .collection('messages')
         .doc(chatId)
         .collection('messages')
@@ -236,7 +232,7 @@ class _UserChatPageState extends State<UserChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final messagesRef = FirebaseFirestore.instance
+    final messagesRef = firestore
         .collection('messages')
         .doc(chatId)
         .collection('messages')
@@ -308,7 +304,7 @@ class _UserChatPageState extends State<UserChatPage> {
                       final text = data['text'] ?? '';
                       final imageUrl = data['imageUrl'];
                       final senderId = data['senderId'];
-                      final currentUid = FirebaseAuth.instance.currentUser!.uid;
+                      final currentUid = firebaseAuth.currentUser!.uid;
                       final isUser = senderId == currentUid;
                       final isCurrentUser = senderId == currentUid;
                       final timestamp =

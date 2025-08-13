@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../theme/colors.dart';
@@ -59,15 +58,13 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
 
   Future<String> uploadImageToFirebase(File imageFile) async {
     final fileName = DateTime.now().millisecondsSinceEpoch.toString();
-    final storageRef = FirebaseStorage.instance.ref().child(
-      'project_images/$fileName.jpg',
-    );
+    final storageRef = storage.ref().child('project_images/$fileName.jpg');
     final uploadTask = await storageRef.putFile(imageFile);
     return await uploadTask.ref.getDownloadURL();
   }
 
   Future<void> _onSaveAsDraft() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = firebaseAuth.currentUser;
     if (user == null) return;
 
     final description = _descriptionController.text.trim();
@@ -95,14 +92,12 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
     };
 
     if (widget.project.projectId != null) {
-      await FirebaseFirestore.instance
+      await firestore
           .collection('projects')
           .doc(widget.project.projectId)
           .set(projectData, SetOptions(merge: true));
     } else {
-      final docRef = await FirebaseFirestore.instance
-          .collection('projects')
-          .add(projectData);
+      final docRef = await firestore.collection('projects').add(projectData);
       widget.project.projectId = docRef.id;
     }
 
@@ -129,7 +124,7 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
         widget.project.imagePaths = [imageUrl];
 
         if (widget.project.projectId != null) {
-          await FirebaseFirestore.instance
+          await firestore
               .collection('projects')
               .doc(widget.project.projectId)
               .set({'lastStep': 'customize'}, SetOptions(merge: true));

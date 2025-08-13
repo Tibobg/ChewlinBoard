@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:chewlin_board/core/firebase_refs.dart';
+import 'package:firebase_auth/firebase_auth.dart' show User;
 import '../../theme/colors.dart';
 import '../../widgets/app_header.dart';
 import 'select_board_page.dart';
@@ -12,7 +12,7 @@ class ProjectPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: firebaseAuth.authStateChanges(),
       builder: (context, userSnapshot) {
         if (!userSnapshot.hasData) {
           return const Scaffold(
@@ -37,7 +37,7 @@ class ProjectPage extends StatelessWidget {
               ),
               SafeArea(
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
+                  stream: firestore
                       .collection('projects')
                       .where('userId', isEqualTo: userId)
                       .orderBy('createdAt', descending: true)
@@ -265,10 +265,7 @@ List<Widget> _buildProjectCards(
                 );
 
                 if (confirm == true) {
-                  await FirebaseFirestore.instance
-                      .collection('projects')
-                      .doc(doc.id)
-                      .delete();
+                  await firestore.collection('projects').doc(doc.id).delete();
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Projet supprimé.")),

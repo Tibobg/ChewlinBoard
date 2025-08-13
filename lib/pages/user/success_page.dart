@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import '../../theme/colors.dart';
 import '../../services/order_service.dart';
 import '../../navigation/bottom_nav_container.dart';
@@ -74,7 +74,7 @@ class _SuccessPageState extends State<SuccessPage> {
   }
 
   Future<void> _handleAfterPayment() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = firebaseAuth.currentUser;
     if (currentUser == null) return;
 
     if (widget.isProjectOrder) {
@@ -111,7 +111,7 @@ class _SuccessPageState extends State<SuccessPage> {
       if (projectImageUrl == null && effectiveProjectId != null) {
         try {
           final projDoc =
-              await FirebaseFirestore.instance
+              await firestore
                   .collection('projects')
                   .doc(effectiveProjectId)
                   .get();
@@ -138,17 +138,14 @@ class _SuccessPageState extends State<SuccessPage> {
 
       // 3) Mettre à jour le projet (si id dispo)
       if (effectiveProjectId != null) {
-        await FirebaseFirestore.instance
-            .collection('projects')
-            .doc(effectiveProjectId)
-            .set({
-              'userId': userId,
-              'isPaid': true,
-              'isDraft': false,
-              if (widget.deliveryDate != null)
-                'deliveryDate': widget.deliveryDate!.toIso8601String(),
-              'updatedAt': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true));
+        await firestore.collection('projects').doc(effectiveProjectId).set({
+          'userId': userId,
+          'isPaid': true,
+          'isDraft': false,
+          if (widget.deliveryDate != null)
+            'deliveryDate': widget.deliveryDate!.toIso8601String(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
       } else {
         debugPrint(
           '⚠️ Aucun projectId fourni — on crée quand même la commande.',
@@ -156,7 +153,7 @@ class _SuccessPageState extends State<SuccessPage> {
       }
 
       // 4) Créer l’order (toujours)
-      await FirebaseFirestore.instance.collection('orders').add({
+      await firestore.collection('orders').add({
         'skateboardId': 'customProject',
         'projectId': effectiveProjectId ?? '',
         'projectImageUrl': projectImageUrl ?? '',
@@ -225,7 +222,7 @@ class _SuccessPageState extends State<SuccessPage> {
             ? '✅ Votre commande de planche personnalisée a bien été validée. Merci !'
             : '✅ Votre commande a bien été validée. Merci pour votre achat !';
 
-    await FirebaseFirestore.instance
+    await firestore
         .collection('messages')
         .doc(chatId)
         .collection('messages')
@@ -236,7 +233,7 @@ class _SuccessPageState extends State<SuccessPage> {
           'isRead': false,
         });
 
-    await FirebaseFirestore.instance.collection('messages').doc(chatId).set({
+    await firestore.collection('messages').doc(chatId).set({
       'participants': [userId, adminUid],
       'lastMessage': messageText,
       'updatedAt': Timestamp.now(),

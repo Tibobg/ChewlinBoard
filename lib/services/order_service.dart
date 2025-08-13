@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class OrderService {
   static Future<void> saveOrder({
@@ -10,9 +10,9 @@ class OrderService {
     required String buyerAddress,
     required double price,
   }) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = firebaseAuth.currentUser;
 
-    await FirebaseFirestore.instance.collection('orders').add({
+    await firestore.collection('orders').add({
       'userId': user?.uid,
       'skateboardId': skateboardId,
       'name': buyerName,
@@ -25,9 +25,8 @@ class OrderService {
     });
 
     // Mise à jour du statut de la planche
-    await FirebaseFirestore.instance
-        .collection('skateboards')
-        .doc(skateboardId)
-        .update({'isSold': true});
+    await firestore.collection('skateboards').doc(skateboardId).update({
+      'isSold': true,
+    });
   }
 }

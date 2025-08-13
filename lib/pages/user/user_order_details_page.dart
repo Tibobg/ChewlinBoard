@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/colors.dart';
@@ -35,11 +36,7 @@ class _UserOrderDetailsPageState extends State<UserOrderDetailsPage> {
   Future<void> fetchBoard() async {
     final boardId = widget.orderData['skateboardId'];
     if (boardId != null) {
-      final doc =
-          await FirebaseFirestore.instance
-              .collection('skateboards')
-              .doc(boardId)
-              .get();
+      final doc = await firestore.collection('skateboards').doc(boardId).get();
       if (doc.exists) {
         setState(() {
           boardData = doc.data();

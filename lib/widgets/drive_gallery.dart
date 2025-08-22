@@ -8,7 +8,8 @@ import 'package:shimmer/shimmer.dart';
 import 'package:photo_view/photo_view.dart';
 
 class DriveGallery extends StatefulWidget {
-  const DriveGallery({super.key});
+  final http.Client? httpClient; // pour les tests
+  const DriveGallery({super.key, this.httpClient});
 
   @override
   State<DriveGallery> createState() => _DriveGalleryState();
@@ -69,7 +70,8 @@ class _DriveGalleryState extends State<DriveGallery> {
     final url =
         "https://www.googleapis.com/drive/v3/files?q='$folderId'+in+parents+and+mimeType='image/jpeg'&fields=files(id,name)&key=$apiKey";
 
-    final response = await http.get(Uri.parse(url));
+    final client = widget.httpClient ?? http.Client();
+    final response = await client.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);

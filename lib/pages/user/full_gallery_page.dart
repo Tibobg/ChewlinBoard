@@ -8,6 +8,7 @@ import '../../theme/colors.dart';
 import '../project/order_page.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class FullGalleryPage extends StatefulWidget {
   const FullGalleryPage({super.key});
@@ -30,7 +31,7 @@ class _FullGalleryPageState extends State<FullGalleryPage> {
   String _sortBy = 'createdAt_desc';
 
   Query<Map<String, dynamic>> getSortedQuery() {
-    final base = FirebaseFirestore.instance.collection('skateboards');
+    final base = firestore.collection('skateboards');
     switch (_sortBy) {
       case 'createdAt_asc':
         return base.orderBy('createdAt', descending: false);

@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../theme/colors.dart';
 import '../pages/auth/login_page.dart';
-import '../services/auth_service.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class AdminStatsPage extends StatefulWidget {
   const AdminStatsPage({super.key});
@@ -36,10 +36,8 @@ class _AdminStatsPageState extends State<AdminStatsPage> {
   }
 
   Future<void> fetchStats() async {
-    final ordersSnapshot =
-        await FirebaseFirestore.instance.collection('orders').get();
-    final skateboardsSnapshot =
-        await FirebaseFirestore.instance.collection('skateboards').get();
+    final ordersSnapshot = await firestore.collection('orders').get();
+    final skateboardsSnapshot = await firestore.collection('skateboards').get();
 
     int orders = ordersSnapshot.docs.length;
     double revenue = 0;
@@ -131,7 +129,7 @@ class _AdminStatsPageState extends State<AdminStatsPage> {
                     IconButton(
                       icon: const Icon(Icons.logout, color: AppColors.beige),
                       onPressed: () async {
-                        await AuthService().signOut();
+                        await authService.signOut();
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (_) => const LoginPage()),

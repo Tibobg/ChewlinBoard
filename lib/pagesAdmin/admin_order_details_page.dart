@@ -374,7 +374,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
                           final orderId = widget.orderData['id'];
                           final userId = widget.orderData['userId'];
                           final adminUid = firebaseAuth.currentUser!.uid;
-                          final docRef = FirebaseFirestore.instance
+                          final docRef = firestore
                               .collection('orders')
                               .doc(orderId);
 

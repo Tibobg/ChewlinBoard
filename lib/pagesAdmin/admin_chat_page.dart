@@ -100,7 +100,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
 
     if (imageUrl != null && imageUrl.toString().isNotEmpty) {
       try {
-        final ref = FirebaseStorage.instance.refFromURL(imageUrl);
+        final ref = storage.refFromURL(imageUrl);
         await ref.delete();
       } catch (e) {
         print('Erreur suppression image : $e');
@@ -169,7 +169,7 @@ class _AdminChatPageState extends State<AdminChatPage> {
     if (pickedFile != null) {
       final file = File(pickedFile.path);
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final ref = FirebaseStorage.instance.ref().child('chat_images/$fileName');
+      final ref = storage.ref().child('chat_images/$fileName');
       final uploadTask = await ref.putFile(file);
 
       if (uploadTask.state == TaskState.success) {

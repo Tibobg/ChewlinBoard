@@ -3,10 +3,11 @@ import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../../theme/colors.dart';
 import '../../widgets/app_header.dart';
 import 'customize_board_page.dart';
-import '../../models/project_data.dart'; // à créer si pas encore fait
+import '../../models/project_data.dart';
 
 class SelectBoardPage extends StatefulWidget {
-  const SelectBoardPage({super.key});
+  final bool disableModelViewer; // pour les tests
+  const SelectBoardPage({super.key, this.disableModelViewer = false});
 
   @override
   State<SelectBoardPage> createState() => _SelectBoardPageState();
@@ -93,17 +94,28 @@ class _SelectBoardPageState extends State<SelectBoardPage> {
                               children: [
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(20),
-                                  child: ModelViewer(
-                                    key: ValueKey(board['model']),
-                                    src: board['model']!,
-                                    alt: board['name']!,
-                                    autoRotate: true,
-                                    cameraControls: false,
-                                    disableZoom: true,
-                                    interactionPrompt: InteractionPrompt.none,
-                                    cameraOrbit: '0deg 90deg 100%',
-                                    backgroundColor: Colors.transparent,
-                                  ),
+                                  child:
+                                      widget.disableModelViewer
+                                          ? const ColoredBox(
+                                            // remplace le viewer en test
+                                            color: Colors.transparent,
+                                            child: SizedBox(
+                                              height: 300,
+                                              width: double.infinity,
+                                            ),
+                                          )
+                                          : ModelViewer(
+                                            key: ValueKey(board['model']),
+                                            src: board['model']!,
+                                            alt: board['name']!,
+                                            autoRotate: true,
+                                            cameraControls: false,
+                                            disableZoom: true,
+                                            interactionPrompt:
+                                                InteractionPrompt.none,
+                                            cameraOrbit: '0deg 90deg 100%',
+                                            backgroundColor: Colors.transparent,
+                                          ),
                                 ),
                                 Positioned(
                                   bottom: 12,

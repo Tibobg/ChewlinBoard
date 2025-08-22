@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/colors.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class AdminInventoryPage extends StatefulWidget {
   const AdminInventoryPage({super.key});
@@ -13,7 +14,7 @@ class _AdminInventoryPageState extends State<AdminInventoryPage> {
   String selectedFilter = 'all';
 
   Query getFilteredQuery() {
-    final collection = FirebaseFirestore.instance.collection('skateboards');
+    final collection = firestore.collection('skateboards');
     switch (selectedFilter) {
       case 'newest':
         return collection.orderBy('createdAt', descending: true);
@@ -115,7 +116,7 @@ class _AdminInventoryPageState extends State<AdminInventoryPage> {
                       backgroundColor: AppColors.green,
                     ),
                     onPressed: () async {
-                      await FirebaseFirestore.instance
+                      await firestore
                           .collection('skateboards')
                           .doc(docId)
                           .update({

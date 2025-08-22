@@ -2,10 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../helpers/mock_network_images.dart'; // re-export de mockNetworkImagesFor
+import '../../helpers/mock_network_images.dart'; // re-export de mockNetworkImagesFor
 import 'package:chewlin_board/core/firebase_refs.dart';
 import 'package:chewlin_board/pagesAdmin/admin_order_details_page.dart';
-import '../helpers/pump_app.dart';
+import '../../helpers/pump_app.dart';
 
 void main() {
   setUp(() async {

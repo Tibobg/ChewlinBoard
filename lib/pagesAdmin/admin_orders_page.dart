@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../theme/colors.dart';
 import '../pagesAdmin/admin_order_details_page.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class AdminOrder {
   final String id;
@@ -80,7 +81,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         data['projectId'] is String &&
         (data['projectId'] as String).isNotEmpty) {
       final projDoc =
-          await FirebaseFirestore.instance
+          await firestore
               .collection('projects')
               .doc(data['projectId'] as String)
               .get();
@@ -113,10 +114,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         skateboardId is String &&
         skateboardId.isNotEmpty) {
       final boardDoc =
-          await FirebaseFirestore.instance
-              .collection('skateboards')
-              .doc(skateboardId)
-              .get();
+          await firestore.collection('skateboards').doc(skateboardId).get();
       if (boardDoc.exists) {
         final b = boardDoc.data() ?? {};
         final fromBoard = b['imageUrl'] ?? b['coverUrl'];
@@ -135,7 +133,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
 
   Future<List<AdminOrder>> fetchOrders() async {
     final snap =
-        await FirebaseFirestore.instance
+        await firestore
             .collection('orders')
             .orderBy('timestamp', descending: true)
             .get();
@@ -209,7 +207,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                 return GestureDetector(
                   onTap: () async {
                     final orderDoc =
-                        await FirebaseFirestore.instance
+                        await firestore
                             .collection('orders')
                             .doc(order.id)
                             .get();

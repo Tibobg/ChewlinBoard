@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import 'admin_chat_page.dart';
@@ -9,8 +9,8 @@ class AdminMessagePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser!.uid;
-    final messagesRef = FirebaseFirestore.instance.collection('messages');
+    final currentUid = firebaseAuth.currentUser!.uid;
+    final messagesRef = firestore.collection('messages');
 
     return Scaffold(
       backgroundColor: AppColors.black,
@@ -65,11 +65,7 @@ class AdminMessagePage extends StatelessWidget {
               final chatId = doc.id;
 
               return FutureBuilder<DocumentSnapshot>(
-                future:
-                    FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(userUid)
-                        .get(),
+                future: firestore.collection('users').doc(userUid).get(),
                 builder: (context, userSnapshot) {
                   if (!userSnapshot.hasData) return const SizedBox.shrink();
 
@@ -82,7 +78,7 @@ class AdminMessagePage extends StatelessWidget {
 
                   return StreamBuilder<QuerySnapshot>(
                     stream:
-                        FirebaseFirestore.instance
+                        firestore
                             .collection('messages')
                             .doc(chatId)
                             .collection('messages')

@@ -8,8 +8,8 @@ import 'project_order_page.dart';
 
 class PaymentPage extends StatefulWidget {
   final ProjectData project;
-
-  const PaymentPage({super.key, required this.project});
+  final http.Client? httpClient;
+  const PaymentPage({super.key, required this.project, this.httpClient});
 
   @override
   State<PaymentPage> createState() => _PaymentPageState();
@@ -86,7 +86,8 @@ class _PaymentPageState extends State<PaymentPage> {
     final url =
         'https://www.googleapis.com/calendar/v3/calendars/$calendarId/events?timeMin=${now.toIso8601String()}&timeMax=${future.toIso8601String()}&singleEvents=true&orderBy=startTime&key=$apiKey';
 
-    final response = await http.get(Uri.parse(url));
+    final client = widget.httpClient ?? http.Client();
+    final response = await client.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);

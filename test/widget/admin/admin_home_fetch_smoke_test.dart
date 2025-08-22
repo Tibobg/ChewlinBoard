@@ -9,7 +9,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:chewlin_board/core/firebase_refs.dart';
 import 'package:chewlin_board/services/auth_service.dart';
 import 'package:chewlin_board/pagesAdmin/admin_home_page.dart';
-import '../helpers/seed.dart';
+import '../../helpers/seed.dart';
 
 void main() {
   setUpAll(() async {

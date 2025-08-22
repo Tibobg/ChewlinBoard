@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import '../../theme/colors.dart';
 import '../checkout/stripe_checkout_page.dart';
 
@@ -27,7 +27,7 @@ class _OrderPageState extends State<OrderPage> {
   @override
   void initState() {
     super.initState();
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = firebaseAuth.currentUser;
     if (currentUser != null && currentUser.email != null) {
       emailController.text = currentUser.email!;
     }

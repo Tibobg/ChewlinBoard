@@ -4,24 +4,23 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:chewlin_board/core/firebase_refs.dart';
-import 'package:chewlin_board/pages/user/user_chat_page.dart';
-import '../helpers/pump_app.dart';
+import 'package:chewlin_board/pagesAdmin/admin_chat_page.dart';
+import '../../helpers/pump_app.dart';
 
 void main() {
   setUp(() async {
     firebaseAuth = MockFirebaseAuth(
       signedIn: true,
-      mockUser: MockUser(uid: 'u1'),
+      mockUser: MockUser(uid: 'admin'),
     );
     firestore = FakeFirebaseFirestore();
   });
 
-  testWidgets('UserChatPage: se construit avec messages', (tester) async {
-    final adminUid = 'wjGx853IYFTe2hrtNxrSvTKc23h1';
-    final chatId = 'u1_$adminUid';
-
+  testWidgets('AdminChatPage: se construit avec messages', (tester) async {
+    // Seed: conv admin <-> u1
+    final chatId = 'u1_admin';
     await firestore.collection('messages').doc(chatId).set({
-      'participants': ['u1', adminUid],
+      'participants': ['u1', 'admin'],
       'updatedAt': Timestamp.now(),
     });
     await firestore
@@ -29,7 +28,7 @@ void main() {
         .doc(chatId)
         .collection('messages')
         .add({
-          'senderId': adminUid,
+          'senderId': 'u1',
           'text': 'hello',
           'createdAt': Timestamp.now(),
           'isRead': false,
@@ -39,15 +38,17 @@ void main() {
         .doc(chatId)
         .collection('messages')
         .add({
-          'senderId': 'u1',
+          'senderId': 'admin',
           'text': 'yo',
           'createdAt': Timestamp.now(),
           'isRead': true,
         });
 
-    final app = await pumpApp(const UserChatPage());
+    final app = await pumpApp(
+      const AdminChatPage(userUid: 'u1', pseudo: 'User 1'),
+    );
     await tester.pumpWidget(app);
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.byType(UserChatPage), findsOneWidget);
+    expect(find.byType(AdminChatPage), findsOneWidget);
   });
 }

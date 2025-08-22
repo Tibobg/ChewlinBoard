@@ -30,6 +30,7 @@ class StripeCheckoutPage extends StatefulWidget {
     this.deliveryDate,
   });
 
+  static bool shouldGoToSuccess(String url) => url.contains('/success');
   @override
   State<StripeCheckoutPage> createState() => _StripeCheckoutPageState();
 }
@@ -46,7 +47,7 @@ class _StripeCheckoutPageState extends State<StripeCheckoutPage> {
           ..setNavigationDelegate(
             NavigationDelegate(
               onNavigationRequest: (request) {
-                if (request.url.contains('/success')) {
+                if (StripeCheckoutPage.shouldGoToSuccess(request.url)) {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(

@@ -5,6 +5,7 @@ import 'recap_board_page.dart';
 import '../../models/project_data.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'customize_board_page.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 
 class EditorBoardPage extends StatefulWidget {
   final ProjectData project;
@@ -142,7 +143,7 @@ class _EditorBoardPageState extends State<EditorBoardPage> {
                         widget.project.imageScale = _scale;
 
                         if (widget.project.projectId != null) {
-                          await FirebaseFirestore.instance
+                          await firestore
                               .collection('projects')
                               .doc(widget.project.projectId)
                               .set({

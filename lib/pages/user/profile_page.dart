@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chewlin_board/core/firebase_refs.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../auth/login_page.dart';
-import '../../services/auth_service.dart';
 import 'terms_of_use_page.dart';
 import '../../theme/colors.dart';
 import 'user_order_details_page.dart';
@@ -30,15 +29,11 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> fetchUserData() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = firebaseAuth.currentUser;
     if (user == null) return;
     email = user.email;
 
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
+    final doc = await firestore.collection('users').doc(user.uid).get();
     if (doc.exists) {
       setState(() {
         pseudo = doc.data()?['pseudo'] ?? 'Utilisateur';
@@ -47,12 +42,12 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> fetchOrders() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = firebaseAuth.currentUser?.uid;
     if (uid == null) return;
 
     try {
       final snapshot =
-          await FirebaseFirestore.instance
+          await firestore
               .collection('orders')
               .where('userId', isEqualTo: uid)
               .orderBy('timestamp', descending: true)
@@ -86,15 +81,14 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> exportUserData() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = firebaseAuth.currentUser?.uid;
     if (uid == null) return;
 
-    final userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final userDoc = await firestore.collection('users').doc(uid).get();
     final userData = userDoc.data() ?? {};
 
     final projectsSnap =
-        await FirebaseFirestore.instance
+        await firestore
             .collection('projects')
             .where('userId', isEqualTo: uid)
             .get();
@@ -286,7 +280,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               onPressed: () async {
-                await AuthService().signOut();
+                await authService.signOut();
                 if (!context.mounted) return;
                 Navigator.pushAndRemoveUntil(
                   context,

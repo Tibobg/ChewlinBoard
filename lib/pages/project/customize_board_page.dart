@@ -38,7 +38,7 @@ class _CustomizeBoardPageState extends State<CustomizeBoardPage> {
       final first = paths.first;
       if (first.startsWith('http')) {
         _isFromNetwork = true;
-        _selectedImage = File(''); // just a placeholder
+        _selectedImage = File('');
       } else {
         _selectedImage = File(first);
       }

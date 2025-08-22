@@ -27,11 +27,7 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
 
   Future<void> fetchEvents() async {
     final now = DateTime.now();
-    final nowLocalToUtc = DateTime.utc(
-      now.year,
-      now.month,
-      now.day,
-    ); // 👉 au lieu de .toUtc()
+    final nowLocalToUtc = DateTime.utc(now.year, now.month, now.day);
     final future = DateTime.utc(now.year + 1, 12, 31);
 
     final url =
@@ -98,7 +94,7 @@ class _AvailabilityCalendarState extends State<AvailabilityCalendar> {
         weekendStyle: TextStyle(color: Colors.white70),
       ),
       calendarStyle: const CalendarStyle(
-        defaultTextStyle: TextStyle(color: Colors.white), // 👈 correction ici
+        defaultTextStyle: TextStyle(color: Colors.white),
         weekendTextStyle: TextStyle(color: Colors.white70),
         outsideDaysVisible: false,
         todayDecoration: BoxDecoration(

@@ -15,7 +15,6 @@ class AppHeader extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // 🔙 Flèche retour si demandé
             if (showBackButton)
               Align(
                 alignment: Alignment.centerLeft,
@@ -25,7 +24,6 @@ class AppHeader extends StatelessWidget {
                 ),
               ),
 
-            // ✍️ Signature centrée
             Center(
               child: Image.asset(
                 'assets/images/Logo-blanc.png',
@@ -34,7 +32,6 @@ class AppHeader extends StatelessWidget {
               ),
             ),
 
-            // 🌀 Logo rond à droite
             Align(
               alignment: Alignment.centerRight,
               child: ClipOval(

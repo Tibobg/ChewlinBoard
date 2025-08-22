@@ -1,6 +1,6 @@
 import 'package:chewlin_board/core/firebase_refs.dart';
 import 'package:flutter/material.dart';
-import '../pages/auth/login_page.dart'; // ajuste le chemin si nécessaire
+import '../pages/auth/login_page.dart';
 
 class AdminProjectPage extends StatelessWidget {
   const AdminProjectPage({super.key});

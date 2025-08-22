@@ -19,8 +19,8 @@ void main() {
       cur = l.substring(3).replaceAll('\\', '/');
       continue;
     }
-    if (cur != null && includeAuth.hasMatch(cur!) && l.startsWith('DA:')) {
-      byFile.putIfAbsent(cur!, () => []).add(l.substring(3)); // "line,hit"
+    if (cur != null && includeAuth.hasMatch(cur) && l.startsWith('DA:')) {
+      byFile.putIfAbsent(cur, () => []).add(l.substring(3)); // "line,hit"
     }
   }
 

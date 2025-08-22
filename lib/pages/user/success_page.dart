@@ -15,12 +15,10 @@ class SuccessPage extends StatefulWidget {
   final String buyerAddress;
   final double price;
 
-  // 🔽 Spécifique “projet personnalisé”
+  // Spécifique “projet personnalisé”
   final bool isProjectOrder;
   final String? projectId;
   final DateTime? deliveryDate;
-
-  // 🔽 NOUVEAU : on peut recevoir l’image déjà affichée dans OrderPage
   final String? previewImageUrl;
 
   const SuccessPage({
@@ -97,15 +95,13 @@ class _SuccessPageState extends State<SuccessPage> {
 
   Future<void> _finalizeProjectOrder(String userId) async {
     try {
-      // 1) ProjectId (simple : on prend ce qu'on a reçu)
+      // ProjectId
       String? effectiveProjectId =
           (widget.projectId != null && widget.projectId!.isNotEmpty)
               ? widget.projectId
               : null;
 
-      // 2) Image du projet
-      //    priorité à previewImageUrl (passée depuis OrderPage/StripeCheckoutPage),
-      //    sinon fallback lecture du doc 'projects/{id}'
+      // Image du projet
       String? projectImageUrl = _normalizeStorageUrl(widget.previewImageUrl);
 
       if (projectImageUrl == null && effectiveProjectId != null) {
@@ -136,7 +132,7 @@ class _SuccessPageState extends State<SuccessPage> {
         }
       }
 
-      // 3) Mettre à jour le projet (si id dispo)
+      // Mettre à jour le projet (si id dispo)
       if (effectiveProjectId != null) {
         await firestore.collection('projects').doc(effectiveProjectId).set({
           'userId': userId,
@@ -152,7 +148,7 @@ class _SuccessPageState extends State<SuccessPage> {
         );
       }
 
-      // 4) Créer l’order (toujours)
+      // Créer l’order (toujours)
       await firestore.collection('orders').add({
         'skateboardId': 'customProject',
         'projectId': effectiveProjectId ?? '',
@@ -167,7 +163,7 @@ class _SuccessPageState extends State<SuccessPage> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      // 5) Agenda (non bloquant)
+      // Agenda (non bloquant)
       if (widget.deliveryDate != null) {
         try {
           await _addGoogleCalendarEvent(widget.deliveryDate!, widget.buyerName);
@@ -186,7 +182,6 @@ class _SuccessPageState extends State<SuccessPage> {
   ) async {
     try {
       final url = Uri.parse(
-        // Ta fonction déjà en prod
         'https://europe-west1-chewlinboard-7a16f.cloudfunctions.net/addAgendaEvent',
       );
       final body = {

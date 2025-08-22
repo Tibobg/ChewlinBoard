@@ -45,7 +45,7 @@ class _AdminOrderDetailsPageState extends State<AdminOrderDetailsPage> {
 
     final adminUid = firebaseAuth.currentUser!.uid;
 
-    // initialise/merge le doc parent du chat (optionnel mais sûr)
+    // initialise/merge le doc parent du chat
     final chatId =
         userId.compareTo(adminUid) < 0
             ? '${userId}_$adminUid'

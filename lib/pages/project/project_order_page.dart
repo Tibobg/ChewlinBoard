@@ -57,10 +57,9 @@ class _ProjectOrderPageState extends State<ProjectOrderPage> {
       );
 
       final body = jsonEncode({
-        // On réutilise le même schéma que la galerie
         'skateboardId': widget.projectData.projectId ?? 'customProject',
         'imageUrl': imageUrl,
-        'price': price, // nombre en euros
+        'price': price,
         'buyerName':
             '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
         'email': _emailController.text.trim(),
@@ -92,7 +91,7 @@ class _ProjectOrderPageState extends State<ProjectOrderPage> {
           MaterialPageRoute(
             builder:
                 (_) => StripeCheckoutPage(
-                  checkoutUrl: checkoutUrl, // you already build this
+                  checkoutUrl: checkoutUrl,
                   skateboardId: widget.projectData.projectId ?? '',
                   buyerName:
                       "${_firstNameController.text} ${_lastNameController.text}",

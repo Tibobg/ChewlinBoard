@@ -232,7 +232,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                 (_) => AdminOrderDetailsPage(orderData: item),
                           ),
                         );
-                        fetchUpdates(); // 🔁
+                        fetchUpdates();
                       },
                     ),
                   ],

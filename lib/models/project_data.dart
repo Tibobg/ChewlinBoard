@@ -37,11 +37,11 @@ class ProjectData {
               : null,
       'imageScale': imageScale,
       'deliveryDate': deliveryDate?.toIso8601String(),
-      'createdAt': FieldValue.serverTimestamp(), // 🔥 TIMESTAMP SERVEUR
+      'createdAt': FieldValue.serverTimestamp(), // TIMESTAMP SERVEUR
     };
   }
 
-  // Pour récupérer les données depuis Firestore (optionnel)
+  // Pour récupérer les données depuis Firestore
   factory ProjectData.fromMap(Map<String, dynamic> map, {String? id}) {
     Offset? position;
     try {

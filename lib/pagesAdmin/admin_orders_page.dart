@@ -60,14 +60,14 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   }
 
   Future<String?> _resolveOrderImageUrl(Map<String, dynamic> data) async {
-    // 1) Priorité au champ ajouté dans SuccessPage pour projets custom
+    // Priorité au champ ajouté dans SuccessPage pour projets custom
     final projectImage = data['projectImageUrl'];
     final normalizedProjectImage = _normalizeStorageUrl(
       projectImage as String?,
     );
     if (normalizedProjectImage != null) return normalizedProjectImage;
 
-    // 2) Champs standards dans la commande
+    // Champs standards dans la commande
     final direct =
         data['imageUrl'] ??
         data['customImageUrl'] ??
@@ -76,7 +76,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
     final normalizedDirect = _normalizeStorageUrl(direct as String?);
     if (normalizedDirect != null) return normalizedDirect;
 
-    // 2.5) Fallback spécial "customProject" via projectId -> projects/{projectId}
+    // Fallback spécial "customProject" via projectId -> projects/{projectId}
     if (data['skateboardId'] == 'customProject' &&
         data['projectId'] is String &&
         (data['projectId'] as String).isNotEmpty) {
@@ -90,7 +90,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         final p = projDoc.data() ?? {};
         String? raw;
 
-        // ton schéma actuel : imagePaths est un tableau, on prend le premier élément
+        // imagePaths est un tableau, on prend le premier élément
         if (p['imagePaths'] is List && (p['imagePaths'] as List).isNotEmpty) {
           raw = (p['imagePaths'] as List).first as String?;
         } else if (p['finalImageUrl'] is String) {
@@ -108,7 +108,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       }
     }
 
-    // 3) Sinon, via le skateboard lié
+    // via le skateboard lié
     final skateboardId = data['skateboardId'];
     if (skateboardId != null &&
         skateboardId is String &&
